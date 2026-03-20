@@ -6,7 +6,7 @@
 import { useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrender.com"
 
 export default function MockBkashPage() {
   const params = useSearchParams()

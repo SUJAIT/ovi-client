@@ -5,7 +5,7 @@ import { auth } from "@/lib/firebase"
 import { useUser } from "@/hooks/useUser"
 import { Download, Search, ChevronLeft, ChevronRight, RefreshCw, FileText } from "lucide-react"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrender.com"
 
 type Transaction = {
   _id: string

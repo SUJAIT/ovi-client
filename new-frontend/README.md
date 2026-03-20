@@ -13,7 +13,7 @@ npm install
 ### 3. Environment variables
 `.env.local` এ backend URL দিন:
 ```
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=https://ovi-workstation-backend.onrender.com
 ```
 
 ### 4. Run

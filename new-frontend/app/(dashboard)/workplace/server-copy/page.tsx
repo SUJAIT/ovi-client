@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { AlertCircle, Search, Wallet, Download } from "lucide-react"
 import { useUser } from "@/hooks/useUser"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrender.com"
 
 type NidData = {
   name: string
