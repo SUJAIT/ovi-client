@@ -43,7 +43,7 @@ export function AppSidebar() {
         <NavUser
           name={user?.name ?? "User"}
           email={user?.email ?? ""}
-          avatarUrl={user?.photoURL}
+          avatarUrl={user?.photoURL ?? ""}
           loading={loading}
           balance={user?.wallet?.balance ?? 0} 
           

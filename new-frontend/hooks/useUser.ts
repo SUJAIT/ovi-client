@@ -19,6 +19,7 @@ type User = {
   name?: string
   role: "user" | "admin" | "super_admin"
   wallet: Wallet
+   photoURL?: string
   createdAt?: string
 }
 
