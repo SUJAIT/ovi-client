@@ -1,0 +1,93 @@
+import {
+  LayoutDashboard,
+  Folder,
+  BookOpen,
+  Users,
+  ShieldCheck,
+  BarChart2,
+  Wallet,
+  History,
+  Settings,
+  
+  type LucideIcon,
+} from "lucide-react"
+
+export type TUserRole = "user" | "admin" | "super_admin"
+export type NavChild = { title: string; href: string }
+export type NavItem = {
+  title: string
+  icon: LucideIcon
+  href?: string
+  roles?: TUserRole[]
+  children?: NavChild[]
+}
+export type NavGroup = {
+  label: string
+  roles?: TUserRole[]
+  items: NavItem[]
+}
+export type Team = { name: string; plan: string; logoUrl?: string }
+
+export const TEAMS: Team[] = [{ name: "Easy Shop", plan: "Workstation" }]
+
+export const NAV_GROUPS: NavGroup[] = [
+  // ── সবার জন্য
+  {
+    label: "Application",
+    items: [
+      { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+    ],
+  },
+
+  // ── শুধু User
+  {
+    label: "Platform",
+    roles: ["user"],
+    items: [
+      {
+        title: "Workplace",
+        icon: Folder,
+        children: [
+          { title: "Server-Copy", href: "/workplace/server-copy" },
+        ],
+      },
+      { title: "Services History", icon: BookOpen, href: "/workplace/services-history" },
+      { title: "রিচার্জ", icon: Wallet, href: "/recharge" },
+      { title: "Recharge History", icon: History, href: "/recharge-history" },
+      
+    ],
+  },
+
+  // ── Admin Platform
+  {
+    label: "Platform",
+    roles: ["admin", "super_admin"],
+    items: [
+      {
+        title: "Workplace",
+        icon: Folder,
+        children: [
+          { title: "Server-Copy", href: "/workplace/server-copy" },
+        ],
+      },
+    ],
+  },
+
+  // ── Admin Panel
+  {
+    label: "Admin Panel",
+    roles: ["admin", "super_admin"],
+    items: [
+      { title: "Users", icon: Users, href: "/admin/users", roles: ["admin", "super_admin"] },
+      { title: "Transactions", icon: BarChart2, href: "/admin/transactions", roles: ["admin", "super_admin"] },
+      { title: "Settings", icon: Settings, href: "/admin/settings", roles: ["super_admin"] },
+      
+    { 
+  title: "Analytic-Server-Copy", 
+  icon: BarChart2, 
+  href: "/admin/analytics", 
+  roles: ["admin", "super_admin"] 
+},
+    ],
+  },
+]
