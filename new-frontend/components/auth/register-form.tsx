@@ -52,13 +52,14 @@ export default function Register() {
       // send verification email
       await sendEmailVerification(user)
 
-      Swal.fire({
-        icon: "success",
-        title: "Verify your email",
-        text: "Verification link sent to your email"
-      }).then(() => {
-        router.push("/login")
-      })
+   Swal.fire({
+  icon: "success",
+  title: "Check your email 📩",
+  text: "Verification link sent! If you don’t see it, check Spam or Promotions folder.",
+  confirmButtonText: "OK"
+}).then(() => {
+  router.push("/login")
+})
 
     } catch (error: any) {
 
