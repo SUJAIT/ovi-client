@@ -51,7 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { title: "Server-Copy", href: "/workplace/server-copy" },
         ],
       },
-      { title: "Services History", icon: BookOpen, href: "/workplace/services-history" },
+      { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
       { title: "রিচার্জ", icon: Wallet, href: "/recharge" },
       { title: "Recharge History", icon: History, href: "/recharge-history" },
       
