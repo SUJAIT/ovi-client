@@ -4,7 +4,6 @@
 //   redirect("/dashboard")
 // }
 
-
 "use client"
 
 import { useEffect } from "react"
@@ -17,5 +16,5 @@ export default function Home() {
     router.push("/dashboard")
   }, [])
 
-  return null
+  return <p>Redirecting...</p>
 }
