@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrender.com"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL //|| "https://ovi-workstation-backend.onrender.com"
 
 type User = {
   _id: string

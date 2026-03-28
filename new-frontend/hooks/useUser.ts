@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged } from "firebase/auth"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrender.com"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL //|| "https://ovi-workstation-backend.onrender.com"
 
 type Wallet = {
   balance: number

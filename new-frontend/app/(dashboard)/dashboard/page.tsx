@@ -17,7 +17,7 @@ import {
 const slides = [
   {
     id: 1,
-    title: "স্বাগতম ওয়ার্কস্টেশনে!",
+    title: "ICTSeba-তে স্বাগতম !",
     subtitle: "সার্ভার কপি এখন আরও সহজ",
     bg: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
     accent: "#e94560",
@@ -25,8 +25,8 @@ const slides = [
   },
   {
     id: 2,
-    title: "দ্রুত NID যাচাই করুন",
-    subtitle: "মাত্র ৳৪০ টাকায় সার্ভার কপি",
+    title: "Server Copy সেবা চালু রয়েছে",
+    subtitle: "মাত্র ৳৭০ টাকায় সার্ভার কপি",
     bg: "linear-gradient(135deg, #0d1b2a 0%, #1b4332 50%, #2d6a4f 100%)",
     accent: "#52b788",
     emoji: "✅",
@@ -46,7 +46,7 @@ const services = [
     id: "server-copy",
     title: "সার্ভার কপি",
     subtitle: "NID যাচাই ও PDF",
-    price: "৳৪০",
+    price: "৳৭০",
     priceLabel: "প্রতি কপি",
     icon: FileText,
     href: "/workplace/server-copy",
@@ -90,10 +90,10 @@ const services = [
 
 const notices = [
   "🔔 স্বাগতম! আমাদের সার্ভার কপি সেবা এখন সক্রিয়।",
-  "💡 সার্ভার কপি করতে মাত্র ৳৪০ লাগবে।",
+  "💡 সার্ভার কপি করতে মাত্র ৳৭০ লাগবে।",
   "✅ bKash দিয়ে সহজেই ওয়ালেট রিচার্জ করুন।",
-  "📋 যেকোনো সমস্যায় সাপোর্টে যোগাযোগ করুন।",
-  "🚀 নতুন আপডেট: দ্রুততর NID যাচাই সিস্টেম চালু হয়েছে।",
+  "📋 যেকোনো সমস্যায় সহায়তার জন্য আমাদের WhatsApp নম্বর ০১৮১৮৪৬৮৭৮২-এ যোগাযোগ করুন।",
+  "🚀 সর্বশেষ আপডেট পেতে আমাদের ওয়েবসাইটে নিয়মিত ভিজিট করুন।",
 ]
 
 export default function DashboardPage() {
@@ -182,7 +182,7 @@ export default function DashboardPage() {
         .marquee-wrap {
           overflow: hidden;
           background: hsl(var(--primary));
-          color: #fff;
+          color: #0c0202;
           padding: 8px 0;
           margin-bottom: 18px;
           border-radius: 8px;

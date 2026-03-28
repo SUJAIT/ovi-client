@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator"
 import { AlertCircle, Search, Wallet, Download } from "lucide-react"
 import { useUser } from "@/hooks/useUser"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrender.com"
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL // || "https://ovi-workstation-backend.onrender.com"
 
 type NidData = {
   name: string
@@ -37,7 +38,7 @@ type NidData = {
 }
 
 export default function ServerCopyPage() {
-  const { user } = useUser()
+  const { user,refreshWallet } = useUser()
   const [nid, setNid] = useState("")
   const [dob, setDob] = useState("")
   const [loading, setLoading] = useState(false)
@@ -55,7 +56,7 @@ export default function ServerCopyPage() {
 
     if (!nid || !dob) { setError("NID নম্বর এবং জন্ম তারিখ দিন"); return }
     if (nid.length !== 10 && nid.length !== 17) { setError("NID অবশ্যই ১০ বা ১৭ সংখ্যার হতে হবে"); return }
-    if (!isAdmin && balance < 40) { setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।"); return }
+    if (!isAdmin && balance < 70) { setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।"); return }
 
     setLoading(true)
     try {
@@ -64,6 +65,7 @@ export default function ServerCopyPage() {
       const result = await searchNid(token, nid, dob)
       if (!result.success) { setError(result.message || "তথ্য পাওয়া যায়নি"); return }
       setNidData(result.data)
+      await refreshWallet()//data realtime load 
     } catch {
       setError("সার্ভার এরর। আবার চেষ্টা করুন।")
     } finally {
@@ -148,7 +150,7 @@ export default function ServerCopyPage() {
 
           {!isAdmin && (
             <p className="text-center text-sm text-muted-foreground border rounded-md py-2.5">
-              এই সার্ভার কপি তৈরি করতে <span className="text-primary font-semibold">৳৪০</span> চার্জ কাটবে
+              এই সার্ভার কপি তৈরি করতে <span className="text-primary font-semibold">৳৭০</span> চার্জ কাটবে
             </p>
           )}
 
