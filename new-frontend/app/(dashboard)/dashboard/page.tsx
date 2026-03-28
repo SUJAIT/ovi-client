@@ -97,7 +97,9 @@ const notices = [
 ]
 
 export default function DashboardPage() {
-  const { user, loading } = useUser()
+  // const { user, loading } = useUser()
+  const user = null
+const loading = false
   const router = useRouter()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -105,8 +107,8 @@ export default function DashboardPage() {
   const [touchEnd, setTouchEnd] = useState(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const balance = user?.wallet?.balance ?? 0
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin"
+  // const balance = user?.wallet?.balance ?? 0
+  // const isAdmin = user?.role === "admin" || user?.role === "super_admin"
 
   // Auto slide
   useEffect(() => {
@@ -393,18 +395,18 @@ export default function DashboardPage() {
         <div className="welcome-bar">
           <div>
             <div className="welcome-text">
-              👋 হ্যালো, {loading ? "..." : (user?.name || "ব্যবহারকারী")}! স্বাগতম।
+              👋 হ্যালো, {loading ? "..." : ( "ব্যবহারকারী")}! স্বাগতম।
             </div>
             <div className="welcome-sub">
               সতর্কতার সাথে ব্যবহার করুন এবং নিরাপদ থাকুন।
             </div>
           </div>
-          {!isAdmin && (
+         (
             <div className="balance-badge">
               <Wallet size={15} />
-              ব্যালেন্স: ৳{balance}
+              ব্যালেন্স: ৳ 
             </div>
-          )}
+          )
         </div>
 
         {/* ── Marquee ── */}
