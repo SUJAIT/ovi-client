@@ -9,6 +9,7 @@ import {
   History,
   Settings,
   Bell,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react"
 
@@ -89,6 +90,11 @@ export const NAV_GROUPS: NavGroup[] = [
   href: "/admin/analytics", 
   roles: ["admin", "super_admin"] 
 },
+{
+  title: "Server API Limit",
+  icon: BarChart3, // বা যেকোন icon
+  href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
+}
     ],
   },
 ]
