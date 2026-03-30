@@ -11,8 +11,10 @@ import {
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
+  Bell,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
 
 type User = {
   _id: string
@@ -46,6 +48,7 @@ type Stats = {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pendingRechargeCount, setPendingRechargeCount] = useState(0)
 
   const fetchStats = async () => {
     setLoading(true)
@@ -57,6 +60,16 @@ export default function AdminDashboardPage() {
         getAllUsers(token),
         getAllTransactions(token),
       ])
+
+      // pending recharge requests count
+      try {
+        const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+        const rrRes = await fetch(`${BASE_URL}/recharge-request/all?status=pending`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const rrData = await rrRes.json()
+        if (rrData.success) setPendingRechargeCount(rrData.pendingCount ?? rrData.data?.length ?? 0)
+      } catch {}
 
       const users: User[] = usersRes.success ? usersRes.data : []
       const transactions: Transaction[] = txRes.success ? txRes.data : []
@@ -187,6 +200,43 @@ export default function AdminDashboardPage() {
           Refresh
         </button>
       </div>
+
+      {/* Pending Recharge Notification */}
+      {pendingRechargeCount > 0 && (
+        <Link href="/admin/recharge-requests">
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 18px", borderRadius: "12px",
+            background: "rgba(245,158,11,0.08)", border: "1.5px solid rgba(245,158,11,0.35)",
+            cursor: "pointer", transition: "background 0.15s",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: "10px",
+                background: "rgba(245,158,11,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Bell size={18} color="#d97706" />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#d97706" }}>
+                  {pendingRechargeCount}টি Recharge Request অপেক্ষায় আছে
+                </p>
+                <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginTop: 2 }}>
+                  Approve করতে ক্লিক করুন
+                </p>
+              </div>
+            </div>
+            <span style={{
+              background: "#d97706", color: "#fff",
+              fontSize: 13, fontWeight: 800,
+              padding: "4px 12px", borderRadius: "20px",
+            }}>
+              {pendingRechargeCount}
+            </span>
+          </div>
+        </Link>
+      )}
 
       {/* Today Stats */}
       <div className="grid grid-cols-2 gap-3 p-4 rounded-xl border bg-muted/30">

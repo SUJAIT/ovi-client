@@ -8,7 +8,7 @@ import {
   Wallet,
   History,
   Settings,
-  
+  Bell,
   type LucideIcon,
 } from "lucide-react"
 
@@ -79,6 +79,7 @@ export const NAV_GROUPS: NavGroup[] = [
     roles: ["admin", "super_admin"],
     items: [
       { title: "Users", icon: Users, href: "/admin/users", roles: ["admin", "super_admin"] },
+      { title: "Recharge Requests", icon: Bell, href: "/admin/recharge-requests", roles: ["admin", "super_admin"] },
       { title: "Transactions", icon: BarChart2, href: "/admin/transactions", roles: ["admin", "super_admin"] },
       { title: "Settings", icon: Settings, href: "/admin/settings", roles: ["super_admin"] },
       
