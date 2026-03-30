@@ -72,21 +72,21 @@ const services = [
     price: "",
     priceLabel: "সব রেকর্ড",
     icon: TrendingUp,
-    href: "/transactions",
+    href: "/recharge-history",
     gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
     shadow: "rgba(79,172,254,0.35)",
   },
-  {
-    id: "history",
-    title: "সাম্প্রতিক",
-    subtitle: "কার্যক্রম",
-    price: "",
-    priceLabel: "রিপোর্ট",
-    icon: Clock,
-    href: "/transactions",
-    gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-    shadow: "rgba(67,233,123,0.35)",
-  },
+  // {
+  //   id: "history",
+  //   title: "সাম্প্রতিক",
+  //   subtitle: "কার্যক্রম",
+  //   price: "",
+  //   priceLabel: "রিপোর্ট",
+  //   icon: Clock,
+  //   href: "/transactions",
+  //   gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+  //   shadow: "rgba(67,233,123,0.35)",
+  // },
 ]
 
 const notices = [

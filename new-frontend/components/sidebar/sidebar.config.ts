@@ -28,7 +28,7 @@ export type NavGroup = {
 }
 export type Team = { name: string; plan: string; logoUrl?: string }
 
-export const TEAMS: Team[] = [{ name: "Easy Shop", plan: "Workstation" }]
+export const TEAMS: Team[] = [{ name: "ICT Seba", plan: "Workstation" }]
 
 export const NAV_GROUPS: NavGroup[] = [
   // ── সবার জন্য
