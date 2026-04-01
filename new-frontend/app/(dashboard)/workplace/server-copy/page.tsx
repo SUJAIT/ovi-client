@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AlertCircle, Search, Wallet, Download } from "lucide-react"
 import { useUser } from "@/hooks/useUser"
+import Swal from "sweetalert2"
 
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL // || "https://ovi-workstation-backend.onrender.com"
@@ -49,29 +50,88 @@ export default function ServerCopyPage() {
   const isAdmin = user?.role === "admin" || user?.role === "super_admin"
   const balance = user?.wallet?.balance ?? 0
 
+//alert poup -----
+
+const showLoading = () => {
+  Swal.fire({
+    title: "সার্ভার কপি তৈরি হচ্ছে...",
+    html: "অনুগ্রহ করে অপেক্ষা করুন",
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading()
+    },
+  })
+}
+
+const showSuccess = () => {
+  Swal.fire({
+    icon: "success",
+    title: "সফল হয়েছে",
+    text: "এই পেজ থেকে PDF ডাউনলোড করতে সমস্যা হলে Services-History থেকে ডাউনলোড করুন",
+    confirmButtonText: "ঠিক আছে",
+  })
+}
+
+
+//alert popup ------
+
+
   // ── Search ────────────────────────────────────────────────────────
+  // const handleSearch = async () => {
+  //   setError("")
+  //   setNidData(null)
+
+  //   if (!nid || !dob) { setError("NID নম্বর এবং জন্ম তারিখ দিন"); return }
+  //   if (nid.length !== 10 && nid.length !== 17) { setError("NID অবশ্যই ১০ বা ১৭ সংখ্যার হতে হবে"); return }
+  //   if (!isAdmin && balance < 70) { setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।"); return }
+
+  //   setLoading(true)
+  //   try {
+  //     const token = await auth.currentUser?.getIdToken()
+  //     if (!token) throw new Error("Token not found")
+  //     const result = await searchNid(token, nid, dob)
+  //     if (!result.success) { setError(result.message || "তথ্য পাওয়া যায়নি"); return }
+  //     setNidData(result.data)
+  //     await refreshWallet()//data realtime load 
+  //   } catch {
+  //     setError("সার্ভার এরর। আবার চেষ্টা করুন।")
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
+
   const handleSearch = async () => {
-    setError("")
-    setNidData(null)
+  setError("")
+  setNidData(null)
 
-    if (!nid || !dob) { setError("NID নম্বর এবং জন্ম তারিখ দিন"); return }
-    if (nid.length !== 10 && nid.length !== 17) { setError("NID অবশ্যই ১০ বা ১৭ সংখ্যার হতে হবে"); return }
-    if (!isAdmin && balance < 70) { setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।"); return }
-
-    setLoading(true)
-    try {
-      const token = await auth.currentUser?.getIdToken()
-      if (!token) throw new Error("Token not found")
-      const result = await searchNid(token, nid, dob)
-      if (!result.success) { setError(result.message || "তথ্য পাওয়া যায়নি"); return }
-      setNidData(result.data)
-      await refreshWallet()//data realtime load 
-    } catch {
-      setError("সার্ভার এরর। আবার চেষ্টা করুন।")
-    } finally {
-      setLoading(false)
-    }
+  if (!nid || !dob) {
+    setError("NID নম্বর এবং জন্ম তারিখ দিন")
+    return
   }
+
+  showLoading() //  loader start
+
+  try {
+    const token = await auth.currentUser?.getIdToken()
+    if (!token) throw new Error("Token not found")
+
+    const result = await searchNid(token, nid, dob)
+
+    Swal.close() //   loader বন্ধ
+
+    if (!result.success) {
+      setError(result.message || "তথ্য পাওয়া যায়নি")
+      return
+    }
+
+    setNidData(result.data)
+    showSuccess() //  success popup
+
+  } catch {
+    Swal.close()
+    setError("সার্ভার এরর। আবার চেষ্টা করুন।")
+  }
+}
 
   // ── PDF Download — backend থেকে ───────────────────────────────────
   const handleDownloadPdf = async () => {
@@ -153,6 +213,29 @@ export default function ServerCopyPage() {
               এই সার্ভার কপি তৈরি করতে <span className="text-primary font-semibold">৳৭০</span> চার্জ কাটবে
             </p>
           )}
+
+{/* button server copy create */}
+
+
+{loading && (
+  <div className="flex flex-col items-center justify-center gap-3 py-4">
+
+    {/* Loader Spinner */}
+    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+
+    {/* Text */}
+    <p className="text-sm text-muted-foreground text-center leading-relaxed">
+      সার্ভার কপি তৈরি হচ্ছে... <br />
+      এই পেজ থেকে ডাউনলোড করতে সমস্যা হলে{" "}
+      <span className="font-medium text-primary">
+        Services-History
+      </span>{" "}
+      থেকে ডাউনলোড করুন
+    </p>
+
+  </div>
+)}
+
 
           <Button className="w-full gap-2" onClick={handleSearch} disabled={loading}>
             <Search className="size-4" />

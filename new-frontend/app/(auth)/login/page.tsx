@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword,GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import Swal from "sweetalert2";
 
@@ -44,14 +44,14 @@ export default function Login() {
 
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        setLoading(false);
-        return Swal.fire({
-          icon: "warning",
-          title: "Email not verified",
-          text: "Please verify your email first",
-        });
-      }
+      // if (!user.emailVerified) {
+      //   setLoading(false);
+      //   return Swal.fire({
+      //     icon: "warning",
+      //     title: "Email not verified",
+      //     text: "Please verify your email first",
+      //   });
+      // }
 
       Swal.fire({
         icon: "success",
@@ -80,6 +80,33 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleGoogleLogin = async () => {
+  try {
+    const provider = new GoogleAuthProvider()
+
+    const result = await signInWithPopup(auth, provider)
+
+    const user = result.user
+
+    Swal.fire({
+      icon: "success",
+      title: "Login Successful 🎉",
+      text: `Welcome ${user.displayName}`,
+      timer: 1500,
+      showConfirmButton: false,
+    }).then(() => {
+      router.push("/dashboard")
+    })
+
+  } catch (error: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Google Login Failed",
+      text: error.message,
+    })
+  }
+}
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 px-4">
@@ -133,6 +160,28 @@ export default function Login() {
           >
             {loading ? "Logging in..." : "Login"}
           </Button>
+
+          {/* Divider */}
+<div className="flex items-center gap-2">
+  <div className="flex-1 h-px bg-gray-300"></div>
+  <span className="text-xs text-muted-foreground">OR</span>
+  <div className="flex-1 h-px bg-gray-300"></div>
+</div>
+
+{/* Google Login Button */}
+<Button
+  type="button"
+  variant="outline"
+  className="w-full flex items-center gap-2"
+  onClick={handleGoogleLogin}
+>
+  <img
+    src="https://www.svgrepo.com/show/475656/google-color.svg"
+    alt="google"
+    className="w-5 h-5"
+  />
+  Continue with Google
+</Button>
 
           {/* Register Link */}
           <div className="text-center text-sm text-muted-foreground pt-2">

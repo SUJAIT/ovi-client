@@ -46,7 +46,7 @@ export const NAV_GROUPS: NavGroup[] = [
     roles: ["user"],
     items: [
       {
-        title: "Workplace",
+        title: "সকল-সেবা",
         icon: Folder,
         children: [
           { title: "সার্ভার-কপি", href: "/workplace/server-copy" },

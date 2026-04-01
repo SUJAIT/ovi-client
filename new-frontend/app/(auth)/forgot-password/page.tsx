@@ -17,22 +17,49 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
   const [error, setError] = useState("")
 
-  const handleReset = async () => {
-    setError("")
-    if (!email) { setError("Email দিন"); return }
+  // const handleReset = async () => {
+  //   setError("")
+  //   if (!email) { setError("Email দিন"); return }
 
-    setLoading(true)
-    try {
-      await sendPasswordResetEmail(auth, email)
-      setSent(true)
-    } catch (err: any) {
-      if (err.code === "auth/user-not-found") setError("এই email এ কোনো account নেই")
-      else if (err.code === "auth/invalid-email") setError("সঠিক email দিন")
-      else setError("কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।")
-    } finally {
-      setLoading(false)
-    }
+  //   setLoading(true)
+  //   try {
+  //     await sendPasswordResetEmail(auth, email)
+  //     setSent(true)
+  //   } catch (err: any) {
+  //     if (err.code === "auth/user-not-found") setError("এই email এ কোনো account নেই")
+  //     else if (err.code === "auth/invalid-email") setError("সঠিক email দিন")
+  //     else setError("কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।")
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
+  const handleReset = async () => {
+  setError("");
+  if (!email) { setError("Email দিন"); return }
+
+  setLoading(true)
+  
+  // .env.local থেকে URL নেওয়া হচ্ছে
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  const actionCodeSettings = {
+    // পাসওয়ার্ড রিসেট শেষে ইউজারকে লগইন পেজে ফিরিয়ে আনবে
+    url: `${appUrl}/login`, 
+    handleCodeInApp: true,
+  };
+
+  try {
+    // এখানে ৩য় প্যারামিটার হিসেবে সেটিংসটি দিন
+    await sendPasswordResetEmail(auth, email, actionCodeSettings)
+    setSent(true)
+  } catch (err: any) {
+    if (err.code === "auth/user-not-found") setError("এই email এ কোনো account নেই")
+    else if (err.code === "auth/invalid-email") setError("সঠিক email দিন")
+    else setError("কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।")
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="flex justify-center items-center min-h-screen">

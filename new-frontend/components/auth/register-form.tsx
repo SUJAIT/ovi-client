@@ -4,8 +4,9 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   createUserWithEmailAndPassword,
-  sendEmailVerification,
-  updateProfile
+  // sendEmailVerification,
+  updateProfile,
+  GoogleAuthProvider, signInWithPopup
 } from "firebase/auth"
 
 import { auth } from "@/lib/firebase"
@@ -31,61 +32,140 @@ export default function Register() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
-  const handleRegister = async (e: any) => {
+//   const handleRegister = async (e: any) => {
 
-    e.preventDefault()
+//     e.preventDefault()
 
-    try {
+//     try {
 
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      )
+//       const userCredential = await createUserWithEmailAndPassword(
+//         auth,
+//         email,
+//         password
+//       )
 
-      const user = userCredential.user
+//       const user = userCredential.user
 
 
-      await updateProfile(user, {
-        displayName: name
-      })
-      // send verification email
-      await sendEmailVerification(user)
+//       await updateProfile(user, {
+//         displayName: name
+//       })
+//       // send verification email
+//       await sendEmailVerification(user)
 
-   Swal.fire({
-  icon: "success",
-  title: "Check your email 📩",
-  text: "Verification link sent! If you don’t see it, check Spam or Promotions folder.",
-  confirmButtonText: "OK"
-}).then(() => {
-  router.push("/login")
-})
+//    Swal.fire({
+//   icon: "success",
+//   title: "Check your email 📩",
+//   text: "Verification link sent! If you don’t see it, check Spam or Promotions folder.",
+//   confirmButtonText: "OK"
+// }).then(() => {
+//   router.push("/login")
+// })
 
-    } catch (error: any) {
+//     } catch (error: any) {
 
-      let message = "Registration failed"
+//       let message = "Registration failed"
 
-      if (error.code === "auth/email-already-in-use") {
-        message = "Email already registered"
-      }
+//       if (error.code === "auth/email-already-in-use") {
+//         message = "Email already registered"
+//       }
 
-      if (error.code === "auth/invalid-email") {
-        message = "Invalid email"
-      }
+//       if (error.code === "auth/invalid-email") {
+//         message = "Invalid email"
+//       }
 
-      if (error.code === "auth/weak-password") {
-        message = "Password must be at least 6 characters"
-      }
+//       if (error.code === "auth/weak-password") {
+//         message = "Password must be at least 6 characters"
+//       }
 
-      Swal.fire({
-        icon: "error",
-        title: "Registration Failed",
-        text: message
-      })
+//       Swal.fire({
+//         icon: "error",
+//         title: "Registration Failed",
+//         text: message
+//       })
 
+//     }
+
+//   }
+const handleRegister = async (e: any) => {
+  e.preventDefault()
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    )
+
+    const user = userCredential.user
+
+    await updateProfile(user, {
+      displayName: name
+    })
+
+    // ❌ remove this
+    // await sendEmailVerification(user)
+
+    Swal.fire({
+      icon: "success",
+      title: "Account Created 🎉",
+      text: "You can now login with your account",
+      confirmButtonText: "OK"
+    }).then(() => {
+      router.push("/login")
+    })
+
+  } catch (error: any) {
+    let message = "Registration failed"
+
+    if (error.code === "auth/email-already-in-use") {
+      message = "Email already registered"
     }
 
+    if (error.code === "auth/invalid-email") {
+      message = "Invalid email"
+    }
+
+    if (error.code === "auth/weak-password") {
+      message = "Password must be at least 6 characters"
+    }
+
+    Swal.fire({
+      icon: "error",
+      title: "Registration Failed",
+      text: message
+    })
   }
+}
+
+
+const handleGoogleSignUp = async () => {
+  try {
+    const provider = new GoogleAuthProvider()
+
+    const result = await signInWithPopup(auth, provider)
+
+    const user = result.user
+
+    Swal.fire({
+      icon: "success",
+      title: "ICT-Seba Sign-in সফল 🎉",
+      text: `Welcome ${user.displayName}`,
+      timer: 1500,
+      showConfirmButton: false,
+    }).then(() => {
+      router.push("/dashboard")
+    })
+
+  } catch (error: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Google Sign-in Failed",
+      text: error.message,
+    })
+  }
+}
+
 
   return (
     <form
@@ -139,6 +219,25 @@ export default function Register() {
             Register
           </Button>
 
+<div className="flex items-center gap-2">
+  <div className="flex-1 h-px bg-gray-300"></div>
+  <span className="text-xs text-muted-foreground">OR</span>
+  <div className="flex-1 h-px bg-gray-300"></div>
+</div>
+
+<Button
+  type="button"
+  variant="outline"
+  className="w-full flex items-center gap-2"
+  onClick={handleGoogleSignUp}
+>
+  <img
+    src="https://www.svgrepo.com/show/475656/google-color.svg"
+    alt="google"
+    className="w-5 h-5"
+  />
+  Sign up with Google
+</Button>
 {/* login link add  */}
   <div className="text-center text-sm text-muted-foreground pt-2">
    Already have an account? {" "}
