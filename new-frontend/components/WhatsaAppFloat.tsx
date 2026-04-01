@@ -2,7 +2,7 @@
 
 export default function WhatsAppFloat() {
   const WHATSAPP_LINK =
-    "https://wa.me/8801315015900?text=Hello%20"
+    "https://wa.me/8801973346401?text=Hello%20"
 
   return (
     <a
