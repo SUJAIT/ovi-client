@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { auth } from "@/lib/firebase"
-import { RefreshCw, CheckCircle, XCircle, Clock, Wallet, Search } from "lucide-react"
+import { RefreshCw, CheckCircle, XCircle, Clock, Wallet, Search, BellRing, BellOff } from "lucide-react"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+const POLL_INTERVAL = 15_000 // poll every 15 seconds
 
 type RR = {
   _id: string
@@ -14,6 +15,20 @@ type RR = {
   status: "pending" | "approved" | "rejected"
   adminNote?: string
   createdAt: string
+}
+
+// ── Generate a simple beep using Web Audio API ────────────────────
+function playBeep(ctx: AudioContext) {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.type = "sine"
+  osc.frequency.setValueAtTime(880, ctx.currentTime)
+  gain.gain.setValueAtTime(0.4, ctx.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+  osc.start(ctx.currentTime)
+  osc.stop(ctx.currentTime + 0.4)
 }
 
 export default function AdminRechargeRequestsPage() {
@@ -26,6 +41,39 @@ export default function AdminRechargeRequestsPage() {
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
 
+  // ── Notification / alarm state
+  const [alarmActive, setAlarmActive] = useState(false)
+  const [alarmMuted, setAlarmMuted] = useState(false)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastPendingRef = useRef<number>(0)
+
+  // ── Start continuous alarm (beep every 1.2s) ─────────────────────
+  const startAlarm = useCallback(() => {
+    if (alarmMuted || alarmIntervalRef.current) return
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    const ctx = audioCtxRef.current
+    playBeep(ctx)
+    alarmIntervalRef.current = setInterval(() => playBeep(ctx), 1200)
+    setAlarmActive(true)
+  }, [alarmMuted])
+
+  const stopAlarm = useCallback(() => {
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current)
+      alarmIntervalRef.current = null
+    }
+    setAlarmActive(false)
+  }, [])
+
+  const muteAlarm = () => {
+    stopAlarm()
+    setAlarmMuted(true)
+  }
+
+  // ── Fetch full list ───────────────────────────────────────────────
   const fetchRequests = async (f = filter) => {
     setLoading(true)
     try {
@@ -37,21 +85,77 @@ export default function AdminRechargeRequestsPage() {
       const data = await res.json()
       if (data.success) {
         setRequests(data.data)
-        setPendingCount(data.pendingCount ?? 0)
+        const count = data.pendingCount ?? 0
+        setPendingCount(count)
+        // trigger alarm if new pending arrived
+        if (count > lastPendingRef.current && lastPendingRef.current !== -1) {
+          if (!alarmMuted) startAlarm()
+        }
+        lastPendingRef.current = count
       }
     } catch {}
     finally { setLoading(false) }
   }
 
+  // ── Lightweight poll for pending count only ───────────────────────
+  const pollPendingCount = useCallback(async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      const res = await fetch(`${BASE_URL}/recharge-request/pending-count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!data.success) return
+
+      const count: number = data.pendingCount ?? 0
+      setPendingCount(count)
+
+      // New request arrived since last poll?
+      if (count > lastPendingRef.current) {
+        if (!alarmMuted) startAlarm()
+        // Refresh table if we're on pending/all tab
+        if (filter === "pending" || filter === "all") {
+          fetchRequests(filter)
+        }
+      }
+
+      // No more pending — stop alarm
+      if (count === 0) stopAlarm()
+
+      lastPendingRef.current = count
+    } catch {}
+  }, [alarmMuted, filter, startAlarm, stopAlarm])
+
+  // ── Initial load + set up polling ────────────────────────────────
+  useEffect(() => {
+    lastPendingRef.current = -1 // suppress alarm on first load
+    fetchRequests(filter).then(() => {
+      // After initial load, set ref to current count (no alarm)
+      // lastPendingRef already updated inside fetchRequests
+    })
+    const interval = setInterval(pollPendingCount, POLL_INTERVAL)
+    return () => clearInterval(interval)
+  }, []) // mount only
+
   useEffect(() => { fetchRequests(filter) }, [filter])
 
+  // ── Stop alarm when admin opens the page (seen) ───────────────────
+  useEffect(() => {
+    stopAlarm()
+    setAlarmMuted(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Approve ───────────────────────────────────────────────────────
   const handleApprove = async (id: string, amount: number, name: string) => {
     if (!confirm(`৳${amount} approve করবেন "${name}"-এর জন্য?`)) return
     setActionId(id); setMsg(null)
     try {
       const token = await auth.currentUser?.getIdToken()
       const res = await fetch(`${BASE_URL}/recharge-request/${id}/approve`, {
-        method: "PATCH", headers: { Authorization: `Bearer ${token}` },
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
       setMsg({ text: data.message, ok: data.success })
@@ -60,6 +164,7 @@ export default function AdminRechargeRequestsPage() {
     finally { setActionId(null) }
   }
 
+  // ── Reject ────────────────────────────────────────────────────────
   const handleReject = async () => {
     if (!rejectModal) return
     setActionId(rejectModal.id); setMsg(null)
@@ -88,7 +193,10 @@ export default function AdminRechargeRequestsPage() {
   })
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    new Date(d).toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    })
 
   const sBadge = (s: string) => {
     if (s === "approved") return { color: "#16a34a", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.3)", label: "Approved", icon: <CheckCircle size={10} /> }
@@ -103,10 +211,18 @@ export default function AdminRechargeRequestsPage() {
         .rr-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
         .rr-title { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         .pending-badge { background: #dc2626; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+        .top-actions { display: flex; align-items: center; gap: 8px; }
         .refresh-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: hsl(var(--muted-foreground)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 7px 12px; background: none; cursor: pointer; transition: color 0.15s; }
         .refresh-btn:hover { color: hsl(var(--foreground)); }
+
+        /* ── Alarm banner */
+        @keyframes pulse-border { 0%,100%{border-color:rgba(245,158,11,0.4)} 50%{border-color:rgba(245,158,11,0.9)} }
+        .alarm-banner { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-radius: 12px; background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.4); margin-bottom: 16px; animation: pulse-border 1s ease-in-out infinite; }
+        .alarm-text { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #d97706; }
+        .alarm-mute { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 8px; background: rgba(245,158,11,0.15); color: #d97706; border: none; cursor: pointer; font-size: 12px; font-weight: 600; }
+
         .filters { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-        .filter-tabs { display: flex; gap: 6px; }
+        .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
         .filter-tab { padding: 6px 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .filter-tab.active { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
         .search-wrap { position: relative; }
@@ -136,11 +252,12 @@ export default function AdminRechargeRequestsPage() {
         .modal-input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 14px; outline: none; margin-bottom: 14px; box-sizing: border-box; }
         .modal-input:focus { border-color: hsl(var(--primary)); }
         .modal-btns { display: flex; gap: 8px; }
-        .modal-reject-btn { flex: 1; padding: 10px; border-radius: 8px; background: #dc2626; color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.15s; }
+        .modal-reject-btn { flex: 1; padding: 10px; border-radius: 8px; background: #dc2626; color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
         .modal-reject-btn:disabled { opacity: 0.6; }
         .modal-cancel-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: none; color: hsl(var(--foreground)); font-size: 13px; font-weight: 600; cursor: pointer; }
         .empty-cell { text-align: center; padding: 48px; color: hsl(var(--muted-foreground)); }
         .footer-note { font-size: 12px; color: hsl(var(--muted-foreground)); text-align: center; margin-top: 12px; }
+        .poll-note { font-size: 11px; color: hsl(var(--muted-foreground)); text-align: right; margin-bottom: 6px; }
       `}</style>
 
       {/* Reject Modal */}
@@ -172,14 +289,33 @@ export default function AdminRechargeRequestsPage() {
             Recharge Requests
             {pendingCount > 0 && <span className="pending-badge">{pendingCount} pending</span>}
           </h1>
-          <button className="refresh-btn" onClick={() => fetchRequests(filter)}>
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+          <div className="top-actions">
+            <button className="refresh-btn" onClick={() => fetchRequests(filter)}>
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+          </div>
         </div>
+
+        {/* ── Alarm banner — shows when new pending request arrives */}
+        {alarmActive && (
+          <div className="alarm-banner">
+            <div className="alarm-text">
+              <BellRing size={18} />
+              নতুন Recharge Request এসেছে! ({pendingCount}টি pending)
+            </div>
+            <button className="alarm-mute" onClick={muteAlarm}>
+              <BellOff size={13} />
+              Mute
+            </button>
+          </div>
+        )}
 
         {/* Message */}
         {msg && <div className={`msg-box ${msg.ok ? "msg-ok" : "msg-err"}`}>{msg.text}</div>}
+
+        {/* Polling note */}
+        <p className="poll-note">🔄 Auto-refresh প্রতি {POLL_INTERVAL / 1000}s</p>
 
         {/* Filters */}
         <div className="filters">
@@ -240,7 +376,9 @@ export default function AdminRechargeRequestsPage() {
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 13 }}>{r.userId?.name || "—"}</div>
                             <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>{r.userId?.email}</div>
-                            <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>Balance: ৳{r.userId?.wallet?.balance ?? "—"}</div>
+                            <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
+                              Balance: ৳{r.userId?.wallet?.balance ?? "—"}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -250,9 +388,15 @@ export default function AdminRechargeRequestsPage() {
                         <span className="s-pill" style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
                           {b.icon} {b.label}
                         </span>
-                        {r.adminNote && <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginTop: 3 }}>{r.adminNote}</div>}
+                        {r.adminNote && (
+                          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginTop: 3 }}>
+                            {r.adminNote}
+                          </div>
+                        )}
                       </td>
-                      <td style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{formatDate(r.createdAt)}</td>
+                      <td style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>
+                        {formatDate(r.createdAt)}
+                      </td>
                       <td>
                         {r.status === "pending" ? (
                           <>
@@ -273,7 +417,9 @@ export default function AdminRechargeRequestsPage() {
                               Reject
                             </button>
                           </>
-                        ) : <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>—</span>}
+                        ) : (
+                          <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>—</span>
+                        )}
                       </td>
                     </tr>
                   )
