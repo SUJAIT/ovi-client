@@ -3,7 +3,7 @@ import {
   Folder,
   BookOpen,
   Users,
-  ShieldCheck,
+  // ShieldCheck,
   BarChart2,
   Wallet,
   History,

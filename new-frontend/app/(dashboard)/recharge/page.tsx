@@ -5,7 +5,7 @@ import { Wallet, CheckCircle, Clock, XCircle, Send, AlertCircle, Banknote } from
 import { useUser } from "@/hooks/useUser"
 import { auth } from "@/lib/firebase"
 
-const BKASH_NUMBER = "01836346401"
+const BKASH_NUMBER = "01973346401"
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 type MyRequest = {
