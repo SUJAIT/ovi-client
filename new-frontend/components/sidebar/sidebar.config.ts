@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
       { title: "রিচার্জ", icon: Wallet, href: "/recharge" },
       { title: "Recharge History", icon: History, href: "/recharge-history" },
-      
+
     ],
   },
 
@@ -79,22 +79,23 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Admin Panel",
     roles: ["admin", "super_admin"],
     items: [
+      { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
       { title: "Users", icon: Users, href: "/admin/users", roles: ["admin", "super_admin"] },
       { title: "Recharge Requests", icon: Bell, href: "/admin/recharge-requests", roles: ["admin", "super_admin"] },
       { title: "Transactions", icon: BarChart2, href: "/admin/transactions", roles: ["admin", "super_admin"] },
       { title: "Settings", icon: Settings, href: "/admin/settings", roles: ["super_admin"] },
-      
-    { 
-  title: "Analytic-Server-Copy", 
-  icon: BarChart2, 
-  href: "/admin/analytics", 
-  roles: ["admin", "super_admin"] 
-},
-{
-  title: "Server API Limit",
-  icon: BarChart3, // বা যেকোন icon
-  href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
-}
+
+      {
+        title: "Analytic-Server-Copy",
+        icon: BarChart2,
+        href: "/admin/analytics",
+        roles: ["admin", "super_admin"]
+      },
+      {
+        title: "Server API Limit",
+        icon: BarChart3, // বা যেকোন icon
+        href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
+      }
     ],
   },
 ]
