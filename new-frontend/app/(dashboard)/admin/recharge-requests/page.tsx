@@ -2,33 +2,23 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { auth } from "@/lib/firebase"
-import { RefreshCw, CheckCircle, XCircle, Clock, Wallet, Search, BellRing, BellOff } from "lucide-react"
+import { 
+  RefreshCw, CheckCircle, XCircle, Clock, Wallet, Search, 
+  BellRing, BellOff, User, Phone, Eye, EyeOff, MoreHorizontal 
+} from "lucide-react"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
-const POLL_INTERVAL = 15_000 // poll every 15 seconds
+const POLL_INTERVAL = 15_000
 
 type RR = {
   _id: string
   userId: { name?: string; email: string; wallet?: { balance: number } }
   amount: number
   bkashTrxID: string
+  senderNumber?: string // আমরা ব্যাকএন্ডে এটি যোগ করেছি
   status: "pending" | "approved" | "rejected"
   adminNote?: string
   createdAt: string
-}
-
-// ── Generate a simple beep using Web Audio API ────────────────────
-function playBeep(ctx: AudioContext) {
-  const osc = ctx.createOscillator()
-  const gain = ctx.createGain()
-  osc.connect(gain)
-  gain.connect(ctx.destination)
-  osc.type = "sine"
-  osc.frequency.setValueAtTime(880, ctx.currentTime)
-  gain.gain.setValueAtTime(0.4, ctx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-  osc.start(ctx.currentTime)
-  osc.stop(ctx.currentTime + 0.4)
 }
 
 export default function AdminRechargeRequestsPage() {
@@ -40,20 +30,28 @@ export default function AdminRechargeRequestsPage() {
   const [rejectModal, setRejectModal] = useState<{ id: string; note: string } | null>(null)
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [showFullNumber, setShowFullNumber] = useState<string | null>(null)
 
-  // ── Notification / alarm state
+  // ── Audio/Alarm Logic ──────────────────────────────────────────
   const [alarmActive, setAlarmActive] = useState(false)
   const [alarmMuted, setAlarmMuted] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPendingRef = useRef<number>(0)
 
-  // ── Start continuous alarm (beep every 1.2s) ─────────────────────
+  const playBeep = (ctx: AudioContext) => {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.type = "sine"; osc.frequency.setValueAtTime(880, ctx.currentTime)
+    gain.gain.setValueAtTime(0.4, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+    osc.start(); osc.stop(ctx.currentTime + 0.4)
+  }
+
   const startAlarm = useCallback(() => {
     if (alarmMuted || alarmIntervalRef.current) return
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-    }
+    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
     const ctx = audioCtxRef.current
     playBeep(ctx)
     alarmIntervalRef.current = setInterval(() => playBeep(ctx), 1200)
@@ -61,19 +59,11 @@ export default function AdminRechargeRequestsPage() {
   }, [alarmMuted])
 
   const stopAlarm = useCallback(() => {
-    if (alarmIntervalRef.current) {
-      clearInterval(alarmIntervalRef.current)
-      alarmIntervalRef.current = null
-    }
+    if (alarmIntervalRef.current) { clearInterval(alarmIntervalRef.current); alarmIntervalRef.current = null }
     setAlarmActive(false)
   }, [])
 
-  const muteAlarm = () => {
-    stopAlarm()
-    setAlarmMuted(true)
-  }
-
-  // ── Fetch full list ───────────────────────────────────────────────
+  // ── Data Fetching ──────────────────────────────────────────────
   const fetchRequests = async (f = filter) => {
     setLoading(true)
     try {
@@ -87,17 +77,12 @@ export default function AdminRechargeRequestsPage() {
         setRequests(data.data)
         const count = data.pendingCount ?? 0
         setPendingCount(count)
-        // trigger alarm if new pending arrived
-        if (count > lastPendingRef.current && lastPendingRef.current !== -1) {
-          if (!alarmMuted) startAlarm()
-        }
+        if (count > lastPendingRef.current && lastPendingRef.current !== -1 && !alarmMuted) startAlarm()
         lastPendingRef.current = count
       }
-    } catch {}
-    finally { setLoading(false) }
+    } catch { } finally { setLoading(false) }
   }
 
-  // ── Lightweight poll for pending count only ───────────────────────
   const pollPendingCount = useCallback(async () => {
     try {
       const token = await auth.currentUser?.getIdToken()
@@ -107,55 +92,32 @@ export default function AdminRechargeRequestsPage() {
       })
       const data = await res.json()
       if (!data.success) return
-
-      const count: number = data.pendingCount ?? 0
+      const count = data.pendingCount ?? 0
       setPendingCount(count)
-
-      // New request arrived since last poll?
       if (count > lastPendingRef.current) {
         if (!alarmMuted) startAlarm()
-        // Refresh table if we're on pending/all tab
-        if (filter === "pending" || filter === "all") {
-          fetchRequests(filter)
-        }
+        if (filter === "pending" || filter === "all") fetchRequests(filter)
       }
-
-      // No more pending — stop alarm
       if (count === 0) stopAlarm()
-
       lastPendingRef.current = count
     } catch {}
   }, [alarmMuted, filter, startAlarm, stopAlarm])
 
-  // ── Initial load + set up polling ────────────────────────────────
   useEffect(() => {
-    lastPendingRef.current = -1 // suppress alarm on first load
-    fetchRequests(filter).then(() => {
-      // After initial load, set ref to current count (no alarm)
-      // lastPendingRef already updated inside fetchRequests
-    })
+    lastPendingRef.current = -1
+    fetchRequests(filter)
     const interval = setInterval(pollPendingCount, POLL_INTERVAL)
-    return () => clearInterval(interval)
-  }, []) // mount only
+    return () => { clearInterval(interval); stopAlarm() }
+  }, [filter, pollPendingCount])
 
-  useEffect(() => { fetchRequests(filter) }, [filter])
-
-  // ── Stop alarm when admin opens the page (seen) ───────────────────
-  useEffect(() => {
-    stopAlarm()
-    setAlarmMuted(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── Approve ───────────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────
   const handleApprove = async (id: string, amount: number, name: string) => {
-    if (!confirm(`৳${amount} approve করবেন "${name}"-এর জন্য?`)) return
+    if (!confirm(`Confirm approve ৳${amount} for ${name}?`)) return
     setActionId(id); setMsg(null)
     try {
       const token = await auth.currentUser?.getIdToken()
       const res = await fetch(`${BASE_URL}/recharge-request/${id}/approve`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
+        method: "PATCH", headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
       setMsg({ text: data.message, ok: data.success })
@@ -164,7 +126,6 @@ export default function AdminRechargeRequestsPage() {
     finally { setActionId(null) }
   }
 
-  // ── Reject ────────────────────────────────────────────────────────
   const handleReject = async () => {
     if (!rejectModal) return
     setActionId(rejectModal.id); setMsg(null)
@@ -183,253 +144,213 @@ export default function AdminRechargeRequestsPage() {
   }
 
   const filtered = requests.filter((r) => {
-    if (!search.trim()) return true
     const q = search.toLowerCase()
-    return (
-      r.bkashTrxID.toLowerCase().includes(q) ||
-      r.userId?.name?.toLowerCase().includes(q) ||
-      r.userId?.email?.toLowerCase().includes(q)
-    )
+    return r.bkashTrxID.toLowerCase().includes(q) || 
+           r.userId?.name?.toLowerCase().includes(q) || 
+           r.senderNumber?.includes(q)
   })
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    })
-
-  const sBadge = (s: string) => {
-    if (s === "approved") return { color: "#16a34a", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.3)", label: "Approved", icon: <CheckCircle size={10} /> }
-    if (s === "rejected") return { color: "#dc2626", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)", label: "Rejected", icon: <XCircle size={10} /> }
-    return { color: "#d97706", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.3)", label: "Pending", icon: <Clock size={10} /> }
+  // ── UI Helpers ─────────────────────────────────────────────────
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      pending: "bg-amber-100 text-amber-700 border-amber-200",
+      approved: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      rejected: "bg-rose-100 text-rose-700 border-rose-200",
+    }
+    return styles[status as keyof typeof styles] || ""
   }
 
   return (
-    <>
-      <style>{`
-        .rr-wrap { max-width: 1000px; margin: 0 auto; }
-        .rr-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
-        .rr-title { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .pending-badge { background: #dc2626; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
-        .top-actions { display: flex; align-items: center; gap: 8px; }
-        .refresh-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: hsl(var(--muted-foreground)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 7px 12px; background: none; cursor: pointer; transition: color 0.15s; }
-        .refresh-btn:hover { color: hsl(var(--foreground)); }
-
-        /* ── Alarm banner */
-        @keyframes pulse-border { 0%,100%{border-color:rgba(245,158,11,0.4)} 50%{border-color:rgba(245,158,11,0.9)} }
-        .alarm-banner { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-radius: 12px; background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.4); margin-bottom: 16px; animation: pulse-border 1s ease-in-out infinite; }
-        .alarm-text { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #d97706; }
-        .alarm-mute { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 8px; background: rgba(245,158,11,0.15); color: #d97706; border: none; cursor: pointer; font-size: 12px; font-weight: 600; }
-
-        .filters { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-        .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-        .filter-tab { padding: 6px 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-        .filter-tab.active { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
-        .search-wrap { position: relative; }
-        .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: hsl(var(--muted-foreground)); }
-        .search-input { padding: 7px 10px 7px 30px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 13px; outline: none; width: 200px; transition: border-color 0.15s; }
-        .search-input:focus { border-color: hsl(var(--primary)); }
-        .msg-box { padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 14px; }
-        .msg-ok { background: rgba(34,197,94,0.08); color: #16a34a; border: 1px solid rgba(34,197,94,0.25); }
-        .msg-err { background: rgba(239,68,68,0.08); color: #dc2626; border: 1px solid rgba(239,68,68,0.25); }
-        .table-wrap { border: 1px solid hsl(var(--border)); border-radius: 14px; overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; min-width: 680px; }
-        thead tr { background: hsl(var(--muted)/0.5); }
-        th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: hsl(var(--muted-foreground)); letter-spacing: 0.4px; white-space: nowrap; }
-        tbody tr { border-top: 1px solid hsl(var(--border)); transition: background 0.15s; }
-        tbody tr:hover { background: hsl(var(--muted)/0.3); }
-        td { padding: 12px 14px; font-size: 13px; vertical-align: middle; }
-        .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: hsl(var(--primary)/0.12); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: hsl(var(--primary)); flex-shrink: 0; }
-        .trx-mono { font-family: monospace; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
-        .s-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .action-approve { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; background: rgba(34,197,94,0.12); color: #16a34a; }
-        .action-approve:disabled { opacity: 0.5; cursor: not-allowed; }
-        .action-reject { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; background: rgba(239,68,68,0.1); color: #dc2626; margin-left: 6px; }
-        .action-reject:disabled { opacity: 0.5; cursor: not-allowed; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-        .modal-box { background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: 14px; padding: 24px; width: 100%; max-width: 360px; }
-        .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-        .modal-input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 14px; outline: none; margin-bottom: 14px; box-sizing: border-box; }
-        .modal-input:focus { border-color: hsl(var(--primary)); }
-        .modal-btns { display: flex; gap: 8px; }
-        .modal-reject-btn { flex: 1; padding: 10px; border-radius: 8px; background: #dc2626; color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
-        .modal-reject-btn:disabled { opacity: 0.6; }
-        .modal-cancel-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: none; color: hsl(var(--foreground)); font-size: 13px; font-weight: 600; cursor: pointer; }
-        .empty-cell { text-align: center; padding: 48px; color: hsl(var(--muted-foreground)); }
-        .footer-note { font-size: 12px; color: hsl(var(--muted-foreground)); text-align: center; margin-top: 12px; }
-        .poll-note { font-size: 11px; color: hsl(var(--muted-foreground)); text-align: right; margin-bottom: 6px; }
-      `}</style>
-
-      {/* Reject Modal */}
-      {rejectModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <div className="modal-title">Reject করার কারণ (optional)</div>
-            <input
-              className="modal-input"
-              placeholder="কারণ লিখুন..."
-              value={rejectModal.note}
-              onChange={(e) => setRejectModal({ ...rejectModal, note: e.target.value })}
-            />
-            <div className="modal-btns">
-              <button className="modal-reject-btn" onClick={handleReject} disabled={!!actionId}>
-                {actionId ? "..." : "Reject করুন"}
-              </button>
-              <button className="modal-cancel-btn" onClick={() => setRejectModal(null)}>Cancel</button>
-            </div>
+    <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 font-sans text-slate-900">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Wallet className="text-pink-600" /> Recharge Dashboard
+              {pendingCount > 0 && (
+                <span className="bg-rose-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                  {pendingCount} Pending
+                </span>
+              )}
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Manage user bKash recharge requests efficiently</p>
           </div>
-        </div>
-      )}
-
-      <div className="rr-wrap">
-        {/* Header */}
-        <div className="rr-top">
-          <h1 className="rr-title">
-            <Wallet size={22} />
-            Recharge Requests
-            {pendingCount > 0 && <span className="pending-badge">{pendingCount} pending</span>}
-          </h1>
-          <div className="top-actions">
-            <button className="refresh-btn" onClick={() => fetchRequests(filter)}>
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              Refresh
-            </button>
-          </div>
+          <button 
+            onClick={() => fetchRequests(filter)}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-sm font-medium"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
         </div>
 
-        {/* ── Alarm banner — shows when new pending request arrives */}
+        {/* Alarm Banner */}
         {alarmActive && (
-          <div className="alarm-banner">
-            <div className="alarm-text">
-              <BellRing size={18} />
-              নতুন Recharge Request এসেছে! ({pendingCount}টি pending)
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl mb-6 flex items-center justify-between animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-center gap-3 text-amber-800 font-semibold">
+              <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg shadow-amber-200">
+                <BellRing size={20} className="animate-bounce" />
+              </div>
+              নতুন রিকোয়েস্ট এসেছে! চেক করুন।
             </div>
-            <button className="alarm-mute" onClick={muteAlarm}>
-              <BellOff size={13} />
-              Mute
+            <button onClick={() => { stopAlarm(); setAlarmMuted(true) }} className="px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100">
+              MUTE ALARM
             </button>
           </div>
         )}
 
-        {/* Message */}
-        {msg && <div className={`msg-box ${msg.ok ? "msg-ok" : "msg-err"}`}>{msg.text}</div>}
-
-        {/* Polling note */}
-        <p className="poll-note">🔄 Auto-refresh প্রতি {POLL_INTERVAL / 1000}s</p>
-
-        {/* Filters */}
-        <div className="filters">
-          <div className="filter-tabs">
+        {/* Filters & Search */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="flex bg-slate-100 p-1 rounded-xl w-full lg:w-auto">
             {(["pending", "all", "approved", "rejected"] as const).map((f) => (
               <button
                 key={f}
-                className={`filter-tab${filter === f ? " active" : ""}`}
                 onClick={() => setFilter(f)}
+                className={`flex-1 lg:flex-none px-5 py-2 rounded-lg text-xs font-bold transition-all ${
+                  filter === f ? "bg-white shadow-sm text-pink-600" : "text-slate-500 hover:text-slate-700"
+                }`}
               >
-                {f === "pending" ? "⏳ Pending" : f === "all" ? "সব" : f === "approved" ? "✅ Approved" : "❌ Rejected"}
+                {f.toUpperCase()}
               </button>
             ))}
           </div>
-          <div className="search-wrap">
-            <Search size={13} className="search-icon" />
-            <input
-              className="search-input"
-              placeholder="TrxID, নাম, email..."
+
+          <div className="relative w-full lg:w-72">
+            <Search className="absolute left-3 top-1/2 -transform -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="TrxID, Name or Number..." 
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-500/20 outline-none"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Table */}
-        <div className="table-wrap" style={{ overflowX: "auto" }}>
-          <table>
-            <thead>
-              <tr>
-                <th>SL</th>
-                <th>USER</th>
-                <th>AMOUNT</th>
-                <th>BKASH TRX ID</th>
-                <th>STATUS</th>
-                <th>DATE</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={7} className="empty-cell">
-                  <RefreshCw size={20} style={{ margin: "0 auto 8px", display: "block", opacity: 0.4 }} className="animate-spin" />
-                  লোড হচ্ছে...
-                </td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="empty-cell">কোনো request নেই</td></tr>
-              ) : (
-                filtered.map((r, i) => {
-                  const b = sBadge(r.status)
-                  const name = r.userId?.name || r.userId?.email || "—"
-                  return (
-                    <tr key={r._id}>
-                      <td style={{ color: "hsl(var(--muted-foreground))", fontSize: 12 }}>{i + 1}</td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div className="user-avatar">{name[0].toUpperCase()}</div>
+        {/* Main Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50 border-bottom border-slate-100">
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">User Details</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Info</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {loading ? (
+                  <tr><td colSpan={4} className="py-20 text-center text-slate-400">Loading requests...</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={4} className="py-20 text-center text-slate-400">No requests found.</td></tr>
+                ) : (
+                  filtered.map((r) => (
+                    <tr key={r._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-sm">
+                            {r.userId?.name?.[0] || <User size={18} />}
+                          </div>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: 13 }}>{r.userId?.name || "—"}</div>
-                            <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>{r.userId?.email}</div>
-                            <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
-                              Balance: ৳{r.userId?.wallet?.balance ?? "—"}
+                            <div className="text-sm font-bold text-slate-800">{r.userId?.name || "Anonymous"}</div>
+                            <div className="text-[11px] text-slate-500">{r.userId?.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="text-lg font-black text-emerald-600">৳{r.amount}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-mono font-bold text-slate-600 uppercase tracking-tighter">
+                              {r.bkashTrxID}
+                            </span>
+                            
+                            {/* Number logic: Show last 3, toggle full on click */}
+                            <div 
+                              onClick={() => setShowFullNumber(showFullNumber === r._id ? null : r._id)}
+                              className="flex items-center gap-1 cursor-pointer bg-pink-50 text-pink-700 px-2 py-0.5 rounded text-[10px] font-bold hover:bg-pink-100"
+                            >
+                              <Phone size={10} />
+                              {showFullNumber === r._id ? (
+                                r.senderNumber
+                              ) : (
+                                `***${r.senderNumber?.slice(-3)}`
+                              )}
+                              {showFullNumber === r._id ? <EyeOff size={10} /> : <Eye size={10} />}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ fontWeight: 800, color: "#16a34a", fontSize: 15 }}>৳{r.amount}</td>
-                      <td><span className="trx-mono">{r.bkashTrxID}</span></td>
-                      <td>
-                        <span className="s-pill" style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
-                          {b.icon} {b.label}
-                        </span>
-                        {r.adminNote && (
-                          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginTop: 3 }}>
-                            {r.adminNote}
-                          </div>
-                        )}
+
+                      <td className="px-6 py-4">
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase ${getStatusBadge(r.status)}`}>
+                          {r.status === "pending" && <Clock size={12} />}
+                          {r.status === "approved" && <CheckCircle size={12} />}
+                          {r.status === "rejected" && <XCircle size={12} />}
+                          {r.status}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          {new Date(r.createdAt).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                        </div>
                       </td>
-                      <td style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>
-                        {formatDate(r.createdAt)}
-                      </td>
-                      <td>
+
+                      <td className="px-6 py-4 text-right">
                         {r.status === "pending" ? (
-                          <>
-                            <button
-                              className="action-approve"
-                              onClick={() => handleApprove(r._id, r.amount, name)}
-                              disabled={actionId === r._id}
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => handleApprove(r._id, r.amount, r.userId?.name || "User")}
+                              className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 shadow-lg shadow-emerald-100 transition-all"
+                              title="Approve"
                             >
-                              <CheckCircle size={12} />
-                              {actionId === r._id ? "..." : "Approve"}
+                              <CheckCircle size={18} />
                             </button>
-                            <button
-                              className="action-reject"
+                            <button 
                               onClick={() => setRejectModal({ id: r._id, note: "" })}
-                              disabled={actionId === r._id}
+                              className="p-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all"
+                              title="Reject"
                             >
-                              <XCircle size={12} />
-                              Reject
+                              <XCircle size={18} />
                             </button>
-                          </>
+                          </div>
                         ) : (
-                          <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>—</span>
+                          <div className="text-slate-300"><MoreHorizontal size={20} className="inline" /></div>
                         )}
                       </td>
                     </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center text-[11px] font-medium text-slate-500 uppercase">
+             <span>Showing {filtered.length} Requests</span>
+             <span>🔄 Polling Active</span>
+          </div>
         </div>
-        <div className="footer-note">{filtered.length} টি request দেখাচ্ছে</div>
       </div>
-    </>
+
+      {/* Reject Modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold mb-2">Reject Request</h3>
+            <p className="text-sm text-slate-500 mb-4">ইউজারকে রিজেক্ট করার কারণ জানাতে পারেন (ঐচ্ছিক)।</p>
+            <textarea 
+              className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-rose-500/20 mb-4 h-24 resize-none"
+              placeholder="Ex: Invalid Transaction ID"
+              value={rejectModal.note}
+              onChange={(e) => setRejectModal({ ...rejectModal, note: e.target.value })}
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setRejectModal(null)} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl">Cancel</button>
+              <button onClick={handleReject} className="flex-1 py-3 bg-rose-500 text-white text-sm font-bold rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-200">Reject Now</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
