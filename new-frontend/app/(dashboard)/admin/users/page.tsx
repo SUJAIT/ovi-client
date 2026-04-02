@@ -3,18 +3,31 @@
 import { useState, useEffect } from "react"
 import { auth } from "@/lib/firebase"
 import { getAllUsers, rechargeWallet } from "@/lib/api"
-import { RefreshCw, Wallet, Users, ShieldCheck, ShieldX, Search } from "lucide-react"
+import {
+  RefreshCw,
+  Wallet,
+  Users,
+  ShieldCheck,
+  ShieldX,
+  Search,
+  Trash2,
+  Ban,
+  CheckCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Swal from "sweetalert2"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL //|| "https://ovi-workstation-backend.onrender.com"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
+// ── Types ──────────────────────────────────────────────────────
 type User = {
   _id: string
   name?: string
   email: string
   role: "user" | "admin" | "super_admin"
+  isBlocked?: boolean                          // ✅ Fix: missing field added
   wallet?: { balance: number; totalSpent: number; totalRecharge: number }
   createdAt?: string
 }
@@ -23,11 +36,30 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [rechargeData, setRechargeData] = useState<{ userId: string; amount: string; note: string; name: string } | null>(null)
+  const [rechargeData, setRechargeData] = useState<{
+    userId: string
+    amount: string
+    note: string
+    name: string
+  } | null>(null)
   const [rechargeLoading, setRechargeLoading] = useState(false)
   const [roleLoading, setRoleLoading] = useState<string | null>(null)
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
+  // ✅ Fix: unified showMessage using SweetAlert2 toast
+  const showMessage = (text: string, type: "success" | "error") => {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: type,
+      title: text,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+  }
+
+  // ── Fetch Users ───────────────────────────────────────────────
   const fetchUsers = async () => {
     setLoading(true)
     try {
@@ -42,12 +74,24 @@ export default function AdminUsersPage() {
     }
   }
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   // ── Role Change ───────────────────────────────────────────────
   const handleRoleChange = async (userId: string, newRole: "user" | "admin") => {
+    const confirm = await Swal.fire({
+      title: "Role পরিবর্তন করবেন?",
+      text: `Role "${newRole}" করা হবে।`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "হ্যাঁ, পরিবর্তন করুন",
+      cancelButtonText: "বাতিল",
+      confirmButtonColor: newRole === "admin" ? "#2563eb" : "#dc2626",
+    })
+    if (!confirm.isConfirmed) return
+
     setRoleLoading(userId)
-    setMessage(null)
     try {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
@@ -63,16 +107,13 @@ export default function AdminUsersPage() {
       const data = await res.json()
 
       if (data.success) {
-        setMessage({
-          text: `✅ Role successfully changed to ${newRole}`,
-          type: "success",
-        })
+        showMessage(`✅ Role সফলভাবে "${newRole}" করা হয়েছে`, "success")
         fetchUsers()
       } else {
-        setMessage({ text: `❌ ${data.message}`, type: "error" })
+        showMessage(`❌ ${data.message}`, "error")
       }
     } catch {
-      setMessage({ text: "❌ Error occurred", type: "error" })
+      showMessage("❌ Error occurred", "error")
     } finally {
       setRoleLoading(null)
     }
@@ -83,27 +124,104 @@ export default function AdminUsersPage() {
     if (!rechargeData) return
     const amt = parseInt(rechargeData.amount)
     if (!amt || amt <= 0) {
-      setMessage({ text: "সঠিক পরিমাণ দিন", type: "error" })
+      showMessage("সঠিক পরিমাণ দিন", "error")
       return
     }
 
     setRechargeLoading(true)
-    setMessage(null)
     try {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
       const data = await rechargeWallet(token, rechargeData.userId, amt, rechargeData.note)
       if (data.success) {
-        setMessage({ text: `✅ ৳${amt} successfully added to ${rechargeData.name}`, type: "success" })
+        showMessage(`✅ ৳${amt} সফলভাবে ${rechargeData.name}-এ যোগ হয়েছে`, "success")
         setRechargeData(null)
         fetchUsers()
       } else {
-        setMessage({ text: `❌ ${data.message}`, type: "error" })
+        showMessage(`❌ ${data.message}`, "error")
       }
     } catch {
-      setMessage({ text: "❌ Error occurred", type: "error" })
+      showMessage("❌ Error occurred", "error")
     } finally {
       setRechargeLoading(false)
+    }
+  }
+
+  // ── Delete User ───────────────────────────────────────────────
+  // ✅ Fix: showMessage was called but not defined — now fixed
+  const handleDelete = async (userId: string, name: string) => {
+    const confirm = await Swal.fire({
+      title: "User Delete করবেন?",
+      html: `<b>${name}</b> কে permanently delete করা হবে।<br/>এই কাজ undo করা যাবে না।`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "হ্যাঁ, Delete করুন",
+      cancelButtonText: "বাতিল",
+      confirmButtonColor: "#dc2626",
+    })
+    if (!confirm.isConfirmed) return
+
+    setActionLoading(`delete-${userId}`)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      const res = await fetch(`${BASE_URL}/user/user-delete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showMessage("✅ User সফলভাবে delete হয়েছে", "success")
+        fetchUsers()
+      } else {
+        showMessage(`❌ ${data.message}`, "error")
+      }
+    } catch {
+      showMessage("❌ Delete failed", "error")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // ── Block / Unblock ───────────────────────────────────────────
+  const handleToggleBlock = async (userId: string, currentlyBlocked: boolean) => {
+    const confirm = await Swal.fire({
+      title: currentlyBlocked ? "Unblock করবেন?" : "Block করবেন?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: currentlyBlocked ? "হ্যাঁ, Unblock করুন" : "হ্যাঁ, Block করুন",
+      cancelButtonText: "বাতিল",
+      confirmButtonColor: currentlyBlocked ? "#16a34a" : "#d97706",
+    })
+    if (!confirm.isConfirmed) return
+
+    setActionLoading(`block-${userId}`)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      const res = await fetch(`${BASE_URL}/user/user-block`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, isBlocked: !currentlyBlocked }), // ✅ Fix: isBlocked পাঠানো হচ্ছে
+      })
+      const data = await res.json()
+      if (data.success) {
+        showMessage(`✅ User ${currentlyBlocked ? "unblocked" : "blocked"} হয়েছে`, "success")
+        fetchUsers()
+      } else {
+        showMessage(`❌ ${data.message}`, "error")
+      }
+    } catch {
+      showMessage("❌ Action failed", "error")
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -115,15 +233,16 @@ export default function AdminUsersPage() {
   })
 
   const getRoleBadge = (role: string) => {
-    if (role === "super_admin") return { label: "Super Admin", bg: "rgba(139,92,246,0.1)", color: "#7c3aed", border: "rgba(139,92,246,0.3)" }
-    if (role === "admin") return { label: "Admin", bg: "rgba(59,130,246,0.1)", color: "#2563eb", border: "rgba(59,130,246,0.3)" }
+    if (role === "super_admin")
+      return { label: "Super Admin", bg: "rgba(139,92,246,0.1)", color: "#7c3aed", border: "rgba(139,92,246,0.3)" }
+    if (role === "admin")
+      return { label: "Admin", bg: "rgba(59,130,246,0.1)", color: "#2563eb", border: "rgba(59,130,246,0.3)" }
     return { label: "User", bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.3)" }
   }
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
-
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users size={22} /> সব Users
@@ -139,24 +258,12 @@ export default function AdminUsersPage() {
             />
           </div>
           <Button variant="outline" size="sm" onClick={fetchUsers} className="gap-1.5 h-9">
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-            Refresh
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
           </Button>
         </div>
       </div>
 
-      {/* Message */}
-      {message && (
-        <div className={`px-4 py-2.5 rounded-lg text-sm font-medium border ${
-          message.type === "success"
-            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30"
-            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30"
-        }`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* Recharge Modal */}
+      {/* ── Recharge Modal ── */}
       {rechargeData && (
         <Card className="border-2 border-primary/20">
           <CardHeader className="pb-3">
@@ -189,33 +296,38 @@ export default function AdminUsersPage() {
               <Button onClick={handleRecharge} disabled={rechargeLoading} className="flex-1">
                 {rechargeLoading ? "Processing..." : "Recharge করুন"}
               </Button>
-              <Button variant="outline" onClick={() => setRechargeData(null)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setRechargeData(null)}>
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-4 gap-3">
         {[
-          { label: "মোট Users", value: users.filter(u => u.role === "user").length, color: "#16a34a" },
-          { label: "মোট Admins", value: users.filter(u => u.role === "admin").length, color: "#2563eb" },
-          { label: "Super Admins", value: users.filter(u => u.role === "super_admin").length, color: "#7c3aed" },
+          { label: "মোট Users", value: users.filter((u) => u.role === "user").length, color: "#16a34a" },
+          { label: "মোট Admins", value: users.filter((u) => u.role === "admin").length, color: "#2563eb" },
+          { label: "Super Admins", value: users.filter((u) => u.role === "super_admin").length, color: "#7c3aed" },
+          { label: "Blocked", value: users.filter((u) => u.isBlocked).length, color: "#dc2626" },
         ].map((s) => (
           <div key={s.label} className="border rounded-xl p-4 text-center bg-background">
-            <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-2xl font-bold" style={{ color: s.color }}>
+              {s.value}
+            </div>
             <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Table */}
+      {/* ── Table ── */}
       <div className="border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[850px]">
             <thead>
               <tr className="bg-muted/50 border-b">
-                {["SL", "Name", "Email", "Role", "Balance", "Action"].map((h) => (
+                {["SL", "Name", "Email", "Role", "Balance", "Status", "Action"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">
                     {h}
                   </th>
@@ -225,14 +337,14 @@ export default function AdminUsersPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <RefreshCw size={20} className="animate-spin mx-auto mb-2" />
                     লোড হচ্ছে...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     কোনো user নেই
                   </td>
                 </tr>
@@ -240,9 +352,19 @@ export default function AdminUsersPage() {
                 filtered.map((user, i) => {
                   const badge = getRoleBadge(user.role)
                   const isSuper = user.role === "super_admin"
+                  const isBlocked = user.isBlocked ?? false
+
                   return (
-                    <tr key={user._id} className="border-t hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={user._id}
+                      className={`border-t transition-colors ${
+                        isBlocked ? "bg-red-50/40 dark:bg-red-950/10" : "hover:bg-muted/30"
+                      }`}
+                    >
+                      {/* SL */}
                       <td className="px-4 py-3 text-sm text-muted-foreground">{i + 1}</td>
+
+                      {/* Name */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
@@ -251,32 +373,79 @@ export default function AdminUsersPage() {
                           <span className="text-sm font-medium">{user.name || "—"}</span>
                         </div>
                       </td>
+
+                      {/* Email */}
                       <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
+
+                      {/* Role Badge */}
                       <td className="px-4 py-3">
-                        <span style={{
-                          display: "inline-block",
-                          padding: "3px 10px",
-                          borderRadius: "20px",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          background: badge.bg,
-                          color: badge.color,
-                          border: `1px solid ${badge.border}`,
-                        }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "3px 10px",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            background: badge.bg,
+                            color: badge.color,
+                            border: `1px solid ${badge.border}`,
+                          }}
+                        >
                           {badge.label}
                         </span>
                       </td>
+
+                      {/* Balance */}
                       <td className="px-4 py-3 text-sm font-semibold">
                         {user.role === "user" ? (
                           <span className="text-green-600">৳{user.wallet?.balance ?? 0}</span>
-                        ) : "—"}
+                        ) : (
+                          "—"
+                        )}
                       </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        {isBlocked ? (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "3px 10px",
+                              borderRadius: "20px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              background: "rgba(239,68,68,0.1)",
+                              color: "#dc2626",
+                              border: "1px solid rgba(239,68,68,0.3)",
+                            }}
+                          >
+                            Blocked
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "3px 10px",
+                              borderRadius: "20px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              background: "rgba(34,197,94,0.1)",
+                              color: "#16a34a",
+                              border: "1px solid rgba(34,197,94,0.3)",
+                            }}
+                          >
+                            Active
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
                       <td className="px-4 py-3">
                         {isSuper ? (
                           <span className="text-xs text-muted-foreground">Protected</span>
                         ) : (
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {/* Role Toggle */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Make Admin / Remove Admin */}
                             {user.role === "user" ? (
                               <button
                                 onClick={() => handleRoleChange(user._id, "admin")}
@@ -311,15 +480,12 @@ export default function AdminUsersPage() {
                               </button>
                             )}
 
-                            {/* Recharge — শুধু user এর জন্য */}
+                            {/* Recharge (only for regular users) */}
                             {user.role === "user" && (
                               <button
-                                onClick={() => setRechargeData({
-                                  userId: user._id,
-                                  amount: "",
-                                  note: "",
-                                  name: user.name || user.email,
-                                })}
+                                onClick={() =>
+                                  setRechargeData({ userId: user._id, amount: "", note: "", name: user.name || user.email })
+                                }
                                 style={{
                                   display: "flex", alignItems: "center", gap: "4px",
                                   padding: "5px 10px", borderRadius: "6px",
@@ -328,10 +494,44 @@ export default function AdminUsersPage() {
                                   border: "1px solid rgba(34,197,94,0.3)",
                                 }}
                               >
-                                <Wallet size={12} />
-                                Recharge
+                                <Wallet size={12} />Recharge
                               </button>
                             )}
+
+                            {/* Block / Unblock */}
+                            <button
+                              onClick={() => handleToggleBlock(user._id, isBlocked)}
+                              disabled={actionLoading === `block-${user._id}`}
+                              style={{
+                                display: "flex", alignItems: "center", gap: "4px",
+                                padding: "5px 10px", borderRadius: "6px",
+                                fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                                background: isBlocked ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)",
+                                color: isBlocked ? "#16a34a" : "#d97706",
+                                border: `1px solid ${isBlocked ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                                opacity: actionLoading === `block-${user._id}` ? 0.6 : 1,
+                              }}
+                            >
+                              {isBlocked ? <CheckCircle size={12} /> : <Ban size={12} />}
+                              {actionLoading === `block-${user._id}` ? "..." : isBlocked ? "Unblock" : "Block"}
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => handleDelete(user._id, user.name || user.email)}
+                              disabled={actionLoading === `delete-${user._id}`}
+                              style={{
+                                display: "flex", alignItems: "center", gap: "4px",
+                                padding: "5px 10px", borderRadius: "6px",
+                                fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                                background: "rgba(239,68,68,0.08)", color: "#dc2626",
+                                border: "1px solid rgba(239,68,68,0.25)",
+                                opacity: actionLoading === `delete-${user._id}` ? 0.6 : 1,
+                              }}
+                            >
+                              <Trash2 size={12} />
+                              {actionLoading === `delete-${user._id}` ? "..." : "Delete"}
+                            </button>
                           </div>
                         )}
                       </td>
@@ -343,7 +543,6 @@ export default function AdminUsersPage() {
           </table>
         </div>
       </div>
-
     </div>
   )
 }
