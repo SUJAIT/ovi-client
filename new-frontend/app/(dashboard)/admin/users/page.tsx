@@ -209,7 +209,7 @@ export default function AdminUsersPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId, isBlocked: !currentlyBlocked }), // ✅ Fix: isBlocked পাঠানো হচ্ছে
+        body: JSON.stringify({ userId, isBlocked: !currentlyBlocked }), 
       })
       const data = await res.json()
       if (data.success) {
