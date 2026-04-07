@@ -1,5 +1,6 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ovi-workstation-backend.onrenders.com"
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 const authHeader = (token: string) => ({
   "Content-Type": "application/json",
   Authorization: `Bearer ${token}`,
@@ -69,4 +70,34 @@ export const downloadNidPdf = async (token: string, nid: string, dob: string): P
     `${BASE_URL}/server-copy/pdf?nid=${nid}&dob=${dob}`,
     { headers: { Authorization: `Bearer ${token}` } }
   )
+}
+
+
+// ── Admin Settings ───────────────────────────────────────────────
+export const getAdminSettings = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/settings/admin`, {
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const updateAdminSettings = async (
+  token: string,
+  payload: {
+    marqueeEnabled: boolean
+    marqueeSpeed: number
+    marqueeItems: { text: string; active: boolean; order: number }[]
+  }
+) => {
+  const res = await fetch(`${BASE_URL}/settings/admin`, {
+    method: "PATCH",
+    headers: authHeader(token),
+    body: JSON.stringify(payload),
+  })
+  return res.json()
+}
+
+export const getPublicSettings = async () => {
+  const res = await fetch(`${BASE_URL}/settings/public`)
+  return res.json()
 }

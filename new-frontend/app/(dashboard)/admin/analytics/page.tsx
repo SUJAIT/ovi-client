@@ -131,18 +131,29 @@ export default function AdminAnalyticsPage() {
   const userBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; email: string; count: number; revenue: number }>()
 
-    serverCopyTx.forEach((t) => {
-      const uid = typeof t.userId === "object" ? t.userId._id : t.userId
-      const name = typeof t.userId === "object" ? (t.userId.name || t.userId.email) : uid
-      const email = typeof t.userId === "object" ? t.userId.email : ""
 
-      if (!map.has(uid)) {
-        map.set(uid, { name, email, count: 0, revenue: 0 })
-      }
-      const entry = map.get(uid)!
-      entry.count += 1
-      entry.revenue += t.amount
-    })
+    
+
+serverCopyTx.forEach((t) => {
+  // null check আগে করো
+type PopulatedUser = { _id: string; name?: string; email: string }
+
+// তারপর forEach এর ভেতরে:
+const isObj = typeof t.userId === "object" && t.userId !== null
+const userObj = isObj ? (t.userId as PopulatedUser) : null
+const uid = userObj ? userObj._id : t.userId as string
+const name = userObj ? (userObj.name || userObj.email) : uid
+const email = userObj ? userObj.email : ""
+
+  if (!uid) return // _id ও null হতে পারে
+
+  if (!map.has(uid)) {
+    map.set(uid, { name, email, count: 0, revenue: 0 })
+  }
+  const entry = map.get(uid)!
+  entry.count += 1
+  entry.revenue += t.amount
+})
 
     return Array.from(map.values()).sort((a, b) => b.count - a.count)
   }, [serverCopyTx])

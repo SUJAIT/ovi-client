@@ -1,5 +1,6 @@
 "use client"
 
+import { Moon } from "lucide-react"
 
 
 import { FaMoneyCheckDollar } from "react-icons/fa6";
@@ -30,6 +31,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useRouter } from "next/dist/client/components/navigation";
+import ThemeToggle from "../themeProvider/theme-toggle";
+
+
 
 // ── Types ──────────────────────────────────────────────────────────
 type NavUserProps = {
@@ -131,16 +135,29 @@ export function NavUser({ name, email, avatarUrl, balance, loading, onLogout }: 
                 Balance Recharge
               </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={() => router.push("/recharge-history")}>
-  <History className="mr-2 size-4" />
-  Recharge History
-</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/recharge-history")}>
+                <History className="mr-2 size-4" />
+                Recharge History
+              </DropdownMenuItem>
 
               <DropdownMenuItem>
                 <Bell className="mr-2 size-4" />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
+
+
+  <DropdownMenuItem
+    onSelect={(e) => e.preventDefault()}
+    className="flex items-center justify-between"
+  >
+    <div className="flex items-center">
+      <Moon className="mr-2 size-4" />
+      Theme
+    </div>
+    <ThemeToggle />
+  </DropdownMenuItem>
+            
 
             <DropdownMenuSeparator />
 

@@ -16,6 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { TEAMS, type Team } from "./sidebar.config"
+import Image from "next/image"
 
 export function NavHeader() {
   const { isMobile } = useSidebar()
@@ -30,8 +31,18 @@ export function NavHeader() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <Building2 className="size-4" />
+              <div className="flex aspect-square size-13 items-center justify-center rounded-lg ">
+                {activeTeam.logoUrl ? (
+                  <Image
+                    src={activeTeam.logoUrl}
+                    alt="logo"
+                    width={40}
+                    height={40}
+                    className="object-contain"
+                  />
+                ) : (
+                  <Building2 className="size-4" />
+                )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{activeTeam.name}</span>
@@ -57,7 +68,19 @@ export function NavHeader() {
                 onClick={() => setActiveTeam(team)}
               >
                 <div className="flex size-6 items-center justify-center rounded-sm border">
-                  <Building2 className="size-4 shrink-0" />
+                       <div>
+  {activeTeam.logoUrl ? (
+    <Image
+      src={activeTeam.logoUrl}
+      alt="logo"
+      width={40}
+      height={40}
+      className="object-contain"
+    />
+  ) : (
+    <Building2 className="size-4" />
+  )}
+</div>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{team.name}</span>

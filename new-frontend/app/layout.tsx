@@ -1,7 +1,11 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import "../globals.css"
+import "./globals.css"
+
+
 import WhatsAppFloat from "@/components/WhatsaAppFloat"
+import { ThemeProvider } from "@/components/themeProvider/theme-provider"
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,9 +18,14 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Workstation",
+
+  title: "ICTSEBA",
+  icons: {
+     icon: "/images/favicon.ico",
+  },
   description: "NID Server Copy Platform",
 }
+
 
 export default function RootLayout({
   children,
@@ -24,16 +33,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="bn">
-<body
-  className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-  suppressHydrationWarning={true}
->
-  {children}
-
-  {/* WhatsApp Floating Button */}
-  <WhatsAppFloat />
-</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+          <WhatsAppFloat />
+        </ThemeProvider>
+      </body>
     </html>
   )
 }
