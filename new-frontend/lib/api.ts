@@ -101,3 +101,58 @@ export const getPublicSettings = async () => {
   const res = await fetch(`${BASE_URL}/settings/public`)
   return res.json()
 }
+
+
+// Notifications
+export const getMyNotifications = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/notifications/my`, {
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const getNotificationUnreadCount = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/notifications/unread-count`, {
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const markNotificationRead = async (token: string, notificationId: string) => {
+  const res = await fetch(`${BASE_URL}/notifications/${notificationId}/read`, {
+    method: "PATCH",
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const markAllNotificationsRead = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/notifications/read-all`, {
+    method: "PATCH",
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const deleteNotification = async (token: string, notificationId: string) => {
+  const res = await fetch(`${BASE_URL}/notifications/${notificationId}`, {
+    method: "DELETE",
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const clearAllNotifications = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/notifications`, {
+    method: "DELETE",
+    headers: authHeader(token),
+  })
+  return res.json()
+}
+
+export const getPendingRechargeCount = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/recharge-request/pending-count`, {
+    headers: authHeader(token),
+  })
+  return res.json()
+}
