@@ -156,3 +156,20 @@ export const getPendingRechargeCount = async (token: string) => {
   })
   return res.json()
 }
+
+
+export const registerNotificationDevice = async (
+  token: string,
+  deviceToken: string,
+  deviceType: "web" | "android" | "ios" = "web"
+) => {
+  const res = await fetch(`${BASE_URL}/notifications/devices/register`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({
+      token: deviceToken,
+      deviceType,
+    }),
+  })
+  return res.json()
+}
