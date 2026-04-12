@@ -704,7 +704,8 @@ import {
   useRef,
   useState,
 } from "react"
-import { io, type Socket } from "socket.io-client"
+import { io } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { getToken, isSupported } from "firebase/messaging"
 import { useUser } from "@/hooks/useUser"
 import { auth, messaging } from "@/lib/firebase"
