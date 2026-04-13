@@ -704,10 +704,11 @@ import {
   useRef,
   useState,
 } from "react"
-import ioClient from "socket.io-client";
-import type { Socket } from "socket.io-client";
+import { io } from "socket.io-client"
 
-const io: any = ioClient;
+const socketRef = useRef<ReturnType<typeof io> | null>(null)
+
+
 import { getToken, isSupported } from "firebase/messaging"
 import { useUser } from "@/hooks/useUser"
 import { auth, messaging } from "@/lib/firebase"
@@ -763,7 +764,7 @@ export function NotificationProvider({
   const pendingPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const voiceLoopRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const currentVoiceMessageRef = useRef("")
-  const socketRef = useRef<Socket | null>(null)
+
 
   const playNotificationSound = useCallback(() => {
     if (typeof window === "undefined") return
