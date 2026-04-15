@@ -3,13 +3,13 @@ import {
   Folder,
   BookOpen,
   Users,
-  // ShieldCheck,
   BarChart2,
   Wallet,
   History,
   Settings,
   Bell,
   BarChart3,
+
   type LucideIcon,
 } from "lucide-react"
 
@@ -55,13 +55,13 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "সকল-সেবা",
         icon: Folder,
         children: [
-          { title: "সার্ভার-কপি", href: "/workplace/server-copy" },
+          { title: "সার্ভার-কপি",       href: "/workplace/server-copy" },
+          { title: "NID কার্ড উত্তোলন", href: "/workplace/nid-withdraw" }, // ← new
         ],
       },
       { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
-      { title: "রিচার্জ", icon: Wallet, href: "/recharge" },
-      { title: "রিচার্জ-History", icon: History, href: "/recharge-history" },
-
+      { title: "রিচার্জ",           icon: Wallet,  href: "/recharge" },
+      { title: "রিচার্জ-History",   icon: History, href: "/recharge-history" },
     ],
   },
 
@@ -74,7 +74,25 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Workplace",
         icon: Folder,
         children: [
-          { title: "Server-Copy", href: "/workplace/server-copy" },
+          { title: "Server-Copy",        href: "/workplace/server-copy" },
+         
+        ],
+      },
+    ],
+  },
+
+  // service request 
+
+    {
+    label: "Service Requests",
+    roles: ["admin", "super_admin"],
+    items: [
+      {
+        title: "All Requests",
+        icon: Folder,
+        children: [
+        { title: "NID উত্তোলন Requests",  href: "/admin/nid-withdraw" }, // ← new
+        
         ],
       },
     ],
@@ -85,12 +103,12 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Admin Panel",
     roles: ["admin", "super_admin"],
     items: [
-      { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
-      { title: "Users", icon: Users, href: "/admin/users", roles: ["admin", "super_admin"] },
-      { title: "Recharge Requests", icon: Bell, href: "/admin/recharge-requests", roles: ["admin", "super_admin"] },
-      { title: "Transactions", icon: BarChart2, href: "/admin/transactions", roles: ["admin", "super_admin"] },
-      { title: "Settings", icon: Settings, href: "/admin/settings", roles: ["super_admin"] },
-
+      { title: "Services-History",   icon: BookOpen,  href: "/workplace/services-history" },
+      { title: "Users",              icon: Users,     href: "/admin/users",              roles: ["admin", "super_admin"] },
+      { title: "Recharge Requests",  icon: Bell,      href: "/admin/recharge-requests",  roles: ["admin", "super_admin"] },
+      
+      { title: "Transactions",       icon: BarChart2, href: "/admin/transactions",       roles: ["admin", "super_admin"] },
+      { title: "Settings",           icon: Settings,  href: "/admin/settings",           roles: ["super_admin"] },
       {
         title: "Analytic-Server-Copy",
         icon: BarChart2,
@@ -99,7 +117,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         title: "Server API Limit",
-        icon: BarChart3, // বা যেকোন icon
+        icon: BarChart3,
         href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
       }
     ],
