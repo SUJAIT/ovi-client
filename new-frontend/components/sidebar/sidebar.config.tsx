@@ -14,7 +14,11 @@ import {
 } from "lucide-react"
 
 export type TUserRole = "user" | "admin" | "super_admin"
-export type NavChild = { title: string; href: string }
+export type NavChild = { 
+  title: string
+  href: string
+  badgeKey?: string // used to look up dynamic counts
+}
 export type NavItem = {
   title: string
   icon: LucideIcon
@@ -91,7 +95,7 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "All Requests",
         icon: Folder,
         children: [
-        { title: "NID উত্তোলন Requests",  href: "/admin/nid-withdraw" }, // ← new
+      { title: "NID উত্তোলন Requests", href: "/admin/nid-withdraw", badgeKey: "nid_withdraw_request" },
         
         ],
       },

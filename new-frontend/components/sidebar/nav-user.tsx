@@ -7,11 +7,11 @@ import { FaMoneyCheckDollar } from "react-icons/fa6";
 // import { MdManageHistory } from "react-icons/md";
 import {
   Bell,
-  BadgeCheck,
+  
   CreditCard,
   ChevronsUpDown,
   LogOut,
-  Sparkles,
+   
   History,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
