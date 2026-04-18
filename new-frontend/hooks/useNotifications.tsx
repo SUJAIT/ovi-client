@@ -1935,7 +1935,7 @@ export function NotificationProvider({
         auth: { token },
       })
 
-      socket.auth = { token }
+    
 
       socket.on("connect", () => {
         if (cancelled) return
