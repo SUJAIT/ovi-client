@@ -1932,6 +1932,7 @@ export function NotificationProvider({
         reconnectionDelay: 2000,
         reconnectionDelayMax: 10000,
         timeout: 20000,
+        auth: { token },
       })
 
       socket.auth = { token }
@@ -1962,14 +1963,14 @@ export function NotificationProvider({
 
         const refreshedToken = await currentUser.getIdToken(true).catch(() => null)
         if (refreshedToken) {
-          socket.auth = { token: refreshedToken }
+        (socket as any).auth = { token: refreshedToken }
         }
       })
 
       socket.io.on("reconnect_attempt", async () => {
         const refreshedToken = await currentUser.getIdToken().catch(() => null)
         if (refreshedToken) {
-          socket.auth = { token: refreshedToken }
+           (socket as any).auth = { token: refreshedToken }
         }
       })
 
