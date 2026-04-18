@@ -9,6 +9,7 @@ import {
   Settings,
   Bell,
   BarChart3,
+  Send,
 
   type LucideIcon,
 } from "lucide-react"
@@ -123,7 +124,13 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Server API Limit",
         icon: BarChart3,
         href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
-      }
+      },
+        {
+    title: "Telegram Bot",
+    icon: Send,
+    href: "/admin/telegram",
+  
+  },
     ],
   },
 ]

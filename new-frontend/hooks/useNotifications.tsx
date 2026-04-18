@@ -1821,36 +1821,83 @@ export function NotificationProvider({
   }
 }, [applySnapshot])
 
+  // const handleIncomingNotification = useCallback(
+  //   (candidate: NotificationCandidate | null | undefined, source: "socket" | "push") => {
+  //     const incoming = normalizeNotification(candidate)
+  //     if (!incoming) return
+
+  //     let isNewNotification = false
+
+  //     setNotifications((previous) => {
+  //       isNewNotification = !previous.some((item) => item._id === incoming._id)
+  //       const merged = mergeNotifications(previous, [incoming])
+  //       setUnreadCount(countUnread(merged))
+  //       return merged
+  //     })
+
+  //     if (!isNewNotification) {
+  //       return
+  //     }
+
+  //     if (source === "socket") {
+  //       setConnected(true)
+  //     }
+
+  //     playNotificationSound()
+
+  //     if (incoming.type === RECHARGE_ALERT_TYPE) {
+  //       startVoiceAlert(`${incoming.title}. ${incoming.message}`)
+  //     }
+  //   },
+  //   [playNotificationSound, startVoiceAlert]
+  // )
+
+
   const handleIncomingNotification = useCallback(
-    (candidate: NotificationCandidate | null | undefined, source: "socket" | "push") => {
-      const incoming = normalizeNotification(candidate)
-      if (!incoming) return
+  (
+    candidate: NotificationCandidate | null | undefined,
+    source: "socket" | "push"
+  ) => {
+    const incoming = normalizeNotification(candidate)
+    if (!incoming) return
 
-      let isNewNotification = false
+    let isNewNotification = false
 
-      setNotifications((previous) => {
-        isNewNotification = !previous.some((item) => item._id === incoming._id)
-        const merged = mergeNotifications(previous, [incoming])
-        setUnreadCount(countUnread(merged))
-        return merged
-      })
+    setNotifications((previous) => {
+      isNewNotification = !previous.some(
+        (item) => item._id === incoming._id
+      )
 
-      if (!isNewNotification) {
-        return
-      }
+      const merged = mergeNotifications(previous, [incoming])
+      setUnreadCount(countUnread(merged))
 
-      if (source === "socket") {
-        setConnected(true)
-      }
+      return merged
+    })
 
-      playNotificationSound()
+    if (!isNewNotification) return
 
-      if (incoming.type === RECHARGE_ALERT_TYPE) {
-        startVoiceAlert(`${incoming.title}. ${incoming.message}`)
-      }
-    },
-    [playNotificationSound, startVoiceAlert]
-  )
+    if (source === "socket") {
+      setConnected(true)
+    }
+
+    // Global notification sound
+    playNotificationSound()
+
+    // Recharge request voice alert
+    if (incoming.type === RECHARGE_ALERT_TYPE) {
+      startVoiceAlert(`${incoming.title}. ${incoming.message}`)
+      return
+    }
+
+    // Telegram NID status update
+    if (incoming.type === "nid_withdraw_status_update") {
+      // Keep silent except normal sound.
+      // Toast/page update handled inside page.tsx
+      return
+    }
+  },
+  [playNotificationSound, startVoiceAlert]
+)
 
   useEffect(() => {
     if (!user?._id) {

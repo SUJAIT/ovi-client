@@ -1,3 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // "use client";
 
 // import { useState } from "react";
@@ -293,6 +297,7 @@ export default function Login() {
         ...swalTheme,
       }).then(() => {
         router.push("/dashboard");
+        console.log(process.env.NEXT_PUBLIC_API_URL)
       });
     } catch (error: any) {
       Swal.fire({
