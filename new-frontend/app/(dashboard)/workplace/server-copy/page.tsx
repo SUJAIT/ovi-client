@@ -989,70 +989,629 @@
 
 // 4th version    
 
-"use client"
+// "use client"
 
-import { useState, useRef } from "react"
-import { auth } from "@/lib/firebase"
-import { searchNid } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+// import { useState, useRef } from "react"
+// import { auth } from "@/lib/firebase"
+// import { searchNid } from "@/lib/api"
+// import { Button } from "@/components/ui/button"
+// import { Input } from "@/components/ui/input"
+// import { Label } from "@/components/ui/label"
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+// import { Badge } from "@/components/ui/badge"
+// import { Separator } from "@/components/ui/separator"
+// import { Calendar } from "@/components/ui/calendar"
+// import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+// import {
+//   AlertCircle,
+//   Search,
+//   Wallet,
+//   Download,
+//   CalendarIcon,
+//   Info,
+//   MessageCircle,
+// } from "lucide-react"
+// import { useUser } from "@/hooks/useUser"
+// import Swal from "sweetalert2"
+// import { format, isValid, getDaysInMonth } from "date-fns"
+ 
+// import ServerCopyHistory from "../services-history/serverCopyHistory"
+
+// const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+
+// // ── Types ─────────────────────────────────────────────────────
+// interface NidData {
+//   name: string
+//   nameEn: string
+//   nid: string
+//   pin: string
+//   dob: string
+//   father: string
+//   mother: string
+//   spouse: string
+//   bloodGroup: string
+//   gender: string
+//   birthPlace: string
+//   religion: string
+//   voterNo: string
+//   slNo: number
+//   voterArea: string
+//   voterAreaCode: number
+//   preAddressLine: string
+//   perAddressLine: string
+//   photo: string
+// }
+
+// interface ParseResult {
+//   valid: boolean
+//   formatted: string
+//   date: Date | undefined
+// }
+
+// // ── Flexible date parser ──────────────────────────────────────
+// // Accepts: yyyy-MM-dd  yyyy/MM/dd  yyyy.MM.dd
+// //          dd-MM-yyyy  dd/MM/yyyy  dd.MM.yyyy
+// //          dd-MM-yy    dd/MM/yy    (2-digit year)
+// function parseFlexibleDate(input: string): ParseResult {
+//   const FAIL: ParseResult = { valid: false, formatted: "", date: undefined }
+
+//   const trimmed = input.trim()
+//   if (!trimmed) return FAIL
+
+//   const parts = trimmed.split(/[-\/.]/)
+//   if (parts.length !== 3) return FAIL
+//   if (parts.some((p) => !/^\d+$/.test(p.trim()))) return FAIL
+
+//   const [p0, p1, p2] = parts.map((p) => p.trim())
+//   const n0 = Number(p0)
+//   const n1 = Number(p1)
+//   const n2 = Number(p2)
+
+//   let year: number
+//   let month: number
+//   let day: number
+
+//   if (p0.length === 4) {
+//     // yyyy-MM-dd
+//     year = n0; month = n1; day = n2
+//   } else if (p2.length === 4) {
+//     // dd-MM-yyyy
+//     day = n0; month = n1; year = n2
+//   } else {
+//     // Ambiguous short: treat as dd-MM-yy
+//     if (n0 > 31) return FAIL
+//     day = n0; month = n1; year = n2
+//     year = year < 30 ? 2000 + year : 1900 + year
+//   }
+
+//   if (
+//     !Number.isFinite(year) ||
+//     !Number.isFinite(month) ||
+//     !Number.isFinite(day) ||
+//     month < 1 || month > 12 ||
+//     day < 1 ||
+//     year < 1900 ||
+//     year > new Date().getFullYear()
+//   ) return FAIL
+
+//   if (day > getDaysInMonth(new Date(year, month - 1))) return FAIL
+
+//   const date = new Date(year, month - 1, day)
+//   if (!isValid(date)) return FAIL
+
+//   const formatted = [
+//     String(year),
+//     String(month).padStart(2, "0"),
+//     String(day).padStart(2, "0"),
+//   ].join("-")
+
+//   return { valid: true, formatted, date }
+// }
+
+// // ── Component ─────────────────────────────────────────────────
+// export default function ServerCopyPage() {
+//   const { user, refreshWallet } = useUser()
+
+//   const [nid, setNid] = useState("")
+//   const [dob, setDob] = useState("")          // always yyyy-MM-dd
+//   const [dobDate, setDobDate] = useState<Date | undefined>(undefined)
+//   const [dobInput, setDobInput] = useState("")          // raw display value
+//   const [dobError, setDobError] = useState("")
+//   const [calendarOpen, setCalendarOpen] = useState(false)
+//   const [loading, setLoading] = useState(false)
+//   const [error, setError] = useState("")
+//   const [nidData, setNidData] = useState<NidData | null>(null)
+//   const [pdfLoading, setPdfLoading] = useState(false)
+
+//   const inputRef = useRef<HTMLInputElement>(null)
+
+//   const isAdmin = user?.role === "admin" || user?.role === "super_admin"
+//   const balance = user?.wallet?.balance ?? 0
+
+//   // ── Apply a resolved date to all state ───────────────────
+//   const applyDate = (formatted: string, date: Date) => {
+//     setDob(formatted)
+//     setDobDate(date)
+//     setDobInput(formatted)
+//     setDobError("")
+//   }
+
+//   const clearDate = () => {
+//     setDob("")
+//     setDobDate(undefined)
+//   }
+
+//   // ── Calendar select ──────────────────────────────────────
+//   const handleCalendarSelect = (date: Date | undefined) => {
+//     if (!date) return
+//     applyDate(format(date, "yyyy-MM-dd"), date)
+//     setCalendarOpen(false)
+//     inputRef.current?.focus()
+//   }
+
+//   // ── Typing inside the input — live parse ─────────────────
+//   const handleDobInputChange = (value: string) => {
+//     setDobInput(value)
+//     setDobError("")
+
+//     if (!value.trim()) {
+//       clearDate()
+//       return
+//     }
+
+//     const result = parseFlexibleDate(value)
+//     if (result.valid && result.date) {
+//       setDob(result.formatted)
+//       setDobDate(result.date)
+//     } else {
+//       clearDate()
+//     }
+//   }
+
+//   // ── On blur — normalise display to yyyy-MM-dd ────────────
+//   const handleDobBlur = () => {
+//     if (!dobInput.trim()) return
+
+//     const result = parseFlexibleDate(dobInput)
+//     if (!result.valid) {
+//       setDobError("তারিখটি সঠিক নয়। উদাহরণ: 1999-10-10 বা 10-10-2000")
+//     } else {
+//       setDobError("")
+//       setDobInput(result.formatted)
+//     }
+//   }
+
+//   // ── NID: 13-digit → 17-digit using birth-year ───────────
+//   const getNormalizedNid = (): string => {
+//     const cleaned = nid.replace(/\D/g, "")
+//     if (cleaned.length === 13 && dob) {
+//       return dob.split("-")[0] + cleaned
+//     }
+//     return cleaned
+//   }
+
+//   // ── SweetAlert helpers ───────────────────────────────────
+//   const showLoading = () =>
+//     Swal.fire({
+//       title: "সার্ভার কপি তৈরি হচ্ছে...",
+//       html: "অনুগ্রহ করে অপেক্ষা করুন",
+//       allowOutsideClick: false,
+//       didOpen: () => Swal.showLoading(),
+//       background: "hsl(var(--card))",
+//       color: "hsl(var(--foreground))",
+//     })
+
+//   const showSuccess = () =>
+//     Swal.fire({
+//       icon: "success",
+//       title: "সফল হয়েছে",
+//       text: "এই পেজ থেকে PDF ডাউনলোড করতে সমস্যা হলে Services-History থেকে ডাউনলোড করুন",
+//       confirmButtonText: "ঠিক আছে",
+//       background: "hsl(var(--card))",
+//       color: "hsl(var(--foreground))",
+//       confirmButtonColor: "#0f172a",
+//     })
+
+//   // ── Search ───────────────────────────────────────────────
+//   const handleSearch = async () => {
+//     setError("")
+//     setNidData(null)
+
+//     if (!nid || !dob) {
+//       setError("NID নম্বর এবং জন্ম তারিখ দিন")
+//       return
+//     }
+
+//     if (dobError) {
+//       setError("সঠিক জন্ম তারিখ দিন")
+//       return
+//     }
+
+//     const cleaned = nid.replace(/\D/g, "")
+
+//     if (![10, 13, 17].includes(cleaned.length)) {
+//       setError("NID অবশ্যই ১০, ১৩ বা ১৭ সংখ্যার হতে হবে")
+//       return
+//     }
+
+//     if (cleaned.length === 13 && !dob) {
+//       setError("১৩ সংখ্যার NID এর ক্ষেত্রে জন্ম তারিখ অবশ্যই দিতে হবে")
+//       return
+//     }
+
+//     if (!isAdmin && balance < 70) {
+//       setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।")
+//       return
+//     }
+
+//     setLoading(true)
+//     showLoading()
+
+//     try {
+//       const token = await auth.currentUser?.getIdToken()
+//       if (!token) throw new Error("Token not found")
+
+//       const result = await searchNid(token, getNormalizedNid(), dob)
+//       Swal.close()
+
+//       if (!result.success) {
+//         setError(result.message || "তথ্য পাওয়া যায়নি")
+//         return
+//       }
+
+//       setNidData(result.data)
+//       await refreshWallet()
+//       showSuccess()
+//     } catch {
+//       Swal.close()
+//       setError("সার্ভার এরর। আবার চেষ্টা করুন।")
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   // ── PDF download ─────────────────────────────────────────
+//   const handleDownloadPdf = async () => {
+//     if (!nidData) return
+//     setPdfLoading(true)
+//     try {
+//       const token = await auth.currentUser?.getIdToken()
+//       if (!token) throw new Error("No token")
+
+//       const res = await fetch(
+//         `${BASE_URL}/server-copy/pdf?nid=${nidData.nid}&dob=${nidData.dob}`,
+//         { headers: { Authorization: `Bearer ${token}` } },
+//       )
+//       if (!res.ok) throw new Error("PDF generation failed")
+
+//       const blob = await res.blob()
+//       const url = URL.createObjectURL(blob)
+//       const a = document.createElement("a")
+//       a.href = url
+//       a.download = `NID_${nidData.nid}.pdf`
+//       document.body.appendChild(a)
+//       a.click()
+//       document.body.removeChild(a)
+//       URL.revokeObjectURL(url)
+//     } catch {
+//       setError("PDF তৈরিতে সমস্যা হয়েছে।")
+//     } finally {
+//       setPdfLoading(false)
+//     }
+//   }
+
+//   // ── Render ───────────────────────────────────────────────
+//   return (
+//     <div className="mx-auto max-w-3xl space-y-5 px-3 py-4 text-foreground sm:px-0 sm:py-0">
+
+//       {/* Header */}
+//       <div className="flex items-center justify-between gap-3">
+//         <h1 className="text-xl font-bold text-foreground sm:text-2xl">সার্ভার কপি</h1>
+//         {!isAdmin && (
+//           <Badge variant="outline" className="shrink-0 gap-1.5 px-3 py-1.5 text-sm">
+//             <Wallet className="size-4" />
+//             ৳{balance}
+//           </Badge>
+//         )}
+//       </div>
+
+//       {/* Notice */}
+//       <div className="rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 dark:border-blue-500/30 dark:bg-blue-950/30">
+//         <div className="flex items-start gap-2.5">
+//           <Info className="mt-0.5 size-4 shrink-0 text-blue-500 dark:text-blue-400" />
+//           <p className="text-[13px] leading-relaxed text-blue-800 dark:text-blue-200">
+//             NID অবশ্যই ১০ বা ১৭ সংখ্যার হতে হবে। যদি সংখ্যা ১৩ অঙ্কের হয়, তাহলে NID
+//             নম্বরের পূর্বে জন্মসাল যোগ করে ১৭ অঙ্কের করে সার্ভার কপি তৈরি করুন।
+//           </p>
+//         </div>
+//       </div>
+
+//       {/* Search Card */}
+//       <Card className="border-border bg-card">
+//         <CardHeader className="pb-3">
+//           <CardTitle className="text-base text-foreground">তথ্য অনুসন্ধান</CardTitle>
+//         </CardHeader>
+
+//         <CardContent className="space-y-4">
+
+//           {/* NID input */}
+//           <div className="space-y-1.5">
+//             <Label className="text-foreground">
+//               এনআইডি নম্বর{" "}
+//               <span className="text-red-500">*</span>
+//               <span className="ml-2 text-xs text-muted-foreground">১০ / ১৭ সংখ্যা</span>
+//             </Label>
+//             <Input
+//               placeholder="১০ / ১৭ সংখ্যার আইডি নাম্বার"
+//               value={nid}
+//               onChange={(e) => setNid(e.target.value.replace(/\D/g, ""))}
+//               maxLength={17}
+//               className="border-border bg-background text-foreground placeholder:text-muted-foreground"
+//             />
+//             {nid && (
+//               <p className="text-xs text-muted-foreground">
+//                 সংখ্যা: {nid.length} / ১৭
+//                 {nid.length === 13 && (
+//                   <span className="ml-1 text-amber-600 dark:text-amber-400">
+//                     → জন্মসাল যোগ হবে
+//                   </span>
+//                 )}
+//                 {nid.length === 13 && !dob && (
+//                   <span className="ml-1 text-red-500">(জন্ম তারিখ দিন)</span>
+//                 )}
+//               </p>
+//             )}
+//           </div>
+
+//           {/* DOB — single unified input with calendar icon */}
+//           <div className="space-y-1.5">
+//             <Label className="text-foreground">
+//               জন্ম তারিখ <span className="text-red-500">*</span>
+//             </Label>
+
+//             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+//               {/* Wrapper: positions the calendar icon inside the input */}
+//               <div className="relative">
+//                 <Input
+//                   ref={inputRef}
+//                   placeholder="Year-Month-Date"
+//                   value={dobInput}
+//                   onChange={(e) => handleDobInputChange(e.target.value)}
+//                   onBlur={handleDobBlur}
+//                   maxLength={10}
+//                   className={[
+//                     "border-border bg-background pr-10 text-foreground placeholder:text-muted-foreground",
+//                     dobError
+//                       ? "border-red-400 focus-visible:ring-red-400 dark:border-red-500"
+//                       : dob
+//                         ? "border-emerald-400 focus-visible:ring-emerald-400 dark:border-emerald-500"
+//                         : "",
+//                   ]
+//                     .filter(Boolean)
+//                     .join(" ")}
+//                 />
+//                 {/* Calendar icon trigger — sits inside the input on the right */}
+//                 <PopoverTrigger asChild>
+//                   <button
+//                     type="button"
+//                     aria-label="তারিখ ক্যালেন্ডার খুলুন"
+//                     className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+//                   >
+//                     <CalendarIcon className="size-4" />
+//                   </button>
+//                 </PopoverTrigger>
+//               </div>
+
+//               <PopoverContent className="w-auto p-0" align="end">
+//                 <Calendar
+//                   mode="single"
+//                   selected={dobDate}
+//                   onSelect={handleCalendarSelect}
+//                   defaultMonth={dobDate}
+//                   captionLayout="dropdown"
+//                   fromYear={1940}
+//                   toYear={new Date().getFullYear()}
+//                   className="bg-card"
+//                 />
+//               </PopoverContent>
+//             </Popover>
+
+//             {/* Feedback line below input */}
+//             {dobError ? (
+//               <p className="flex items-center gap-1 text-[11px] text-red-500">
+//                 <AlertCircle className="size-3 shrink-0" />
+//                 {dobError}
+//               </p>
+//             ) : dob ? (
+//               <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+//                 ✓ তারিখ নির্ধারিত: {dob}
+//               </p>
+//             ) : (
+//               <p className="text-[11px] text-muted-foreground">
+//                 ইনপুট বাক্স এ <span className="font-bold text-emerald-600 dark:text-emerald-400">
+//                   YYYY-MM-DD
+//                 </span> এই ফরম্যাট  অথবা ক্যালেন্ডার আইকনে ক্লিক করে আপনার জন্ম তারিখ মাস সন দেন।
+//               </p>
+//             )}
+//           </div>
+
+//           {/* Error banner */}
+//           {error && (
+//             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+//               <AlertCircle className="size-4 shrink-0" />
+//               {error}
+//             </div>
+//           )}
+
+//           {/* Charge info */}
+//           {!isAdmin && (
+//             <p className="rounded-lg border border-border bg-muted/40 py-2.5 text-center text-sm text-muted-foreground">
+//               সার্ভার কপি তৈরি করতে{" "}
+//               <span className="font-semibold text-primary">৳৭০</span> চার্জ কাটবে
+//             </p>
+//           )}
+
+//           {/* Loading indicator */}
+//           {loading && (
+//             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-muted/20 py-5">
+//               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+//               <p className="text-center text-sm leading-relaxed text-muted-foreground">
+//                 সার্ভার কপি তৈরি হচ্ছে...
+//                 <br />
+//                 PDF ডাউনলোডে সমস্যা হলে{" "}
+//                 <span className="font-medium text-primary">Services-History</span> থেকে নিন
+//               </p>
+//             </div>
+//           )}
+
+//           {/* Submit */}
+//           <Button className="w-full gap-2" onClick={handleSearch} disabled={loading}>
+//             <Search className="size-4" />
+//             {loading ? "অনুসন্ধান করা হচ্ছে..." : "সার্ভার কপি তৈরি করুন"}
+//           </Button>
+
+//         </CardContent>
+//       </Card>
+
+//       {/* Result Card */}
+//       {nidData && (
+//         <Card className="border-border bg-card">
+//           <CardHeader className="pb-3">
+//             <div className="flex items-center justify-between gap-3">
+//               <CardTitle className="text-base text-emerald-600 dark:text-emerald-400">
+//                 ✓ তথ্য পাওয়া গেছে
+//               </CardTitle>
+//               <Button
+//                 variant="outline"
+//                 size="sm"
+//                 className="shrink-0 gap-1.5"
+//                 onClick={handleDownloadPdf}
+//                 disabled={pdfLoading}
+//               >
+//                 <Download className="size-4" />
+//                 {pdfLoading ? "PDF তৈরি হচ্ছে..." : "PDF ডাউনলোড"}
+//               </Button>
+//             </div>
+//           </CardHeader>
+
+//           <CardContent>
+//             <div className="flex flex-col gap-4 sm:flex-row">
+//               {nidData.photo && (
+//                 // eslint-disable-next-line @next/next/no-img-element
+//                 <img
+//                   src={nidData.photo}
+//                   alt={nidData.nameEn}
+//                   className="mx-auto h-28 w-24 shrink-0 rounded-lg border border-border object-cover sm:mx-0"
+//                 />
+//               )}
+//               <div className="space-y-1.5 text-sm text-foreground">
+//                 <p>
+//                   <span className="inline-block w-28 text-muted-foreground">নাম (বাংলা):</span>
+//                   <strong>{nidData.name}</strong>
+//                 </p>
+//                 <p>
+//                   <span className="inline-block w-28 text-muted-foreground">নাম (ইংরেজি):</span>
+//                   {nidData.nameEn}
+//                 </p>
+//                 <p>
+//                   <span className="inline-block w-28 text-muted-foreground">NID নম্বর:</span>
+//                   {nidData.nid}
+//                 </p>
+//                 <p>
+//                   <span className="inline-block w-28 text-muted-foreground">জন্ম তারিখ:</span>
+//                   {nidData.dob}
+//                 </p>
+//                 <p>
+//                   <span className="inline-block w-28 text-muted-foreground">পিতার নাম:</span>
+//                   {nidData.father}
+//                 </p>
+//                 <p>
+//                   <span className="inline-block w-28 text-muted-foreground">মাতার নাম:</span>
+//                   {nidData.mother}
+//                 </p>
+//               </div>
+//             </div>
+
+//             <Separator className="my-4" />
+
+//             <p className="text-xs leading-relaxed text-muted-foreground">
+//               <strong className="text-foreground">বর্তমান ঠিকানা:</strong>{" "}
+//               {nidData.preAddressLine}
+//             </p>
+//           </CardContent>
+//         </Card>
+//       )}
+
+// <div className="mt-8">
+//          <ServerCopyHistory />
+//       </div>
+
+//       {/* Footer Notice */}
+//       <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+//         <MessageCircle className="size-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+//         <p>
+//           সার্ভিস জনিত কোন সমস্যা হলে আমাদের{" "}
+//           <a
+//             href="https://wa.me/8801973346401?text=Hello%20"
+//             target="_blank"
+//             rel="noopener noreferrer"
+//             className="font-semibold text-emerald-600 underline underline-offset-2 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+//           >
+//             WhatsApp
+//           </a>{" "}
+//           এ যোগাযোগ করুন।
+//         </p>
+//       </div>
+
+//     </div>
+//   )
+// }
+
+
+// 5th  
+
+"use client"
+// app/(dashboard)/workplace/server-copy/page.tsx
+// Heading and notice text are now loaded from Settings (admin-editable).
+// Service charge is also dynamic — no hard-coded ৳70.
+
+import { useState, useRef, useEffect } from "react"
+import { auth }    from "@/lib/firebase"
+import { searchNid, getPublicSettings } from "@/lib/api"
+import { Button }  from "@/components/ui/button"
+import { Input }   from "@/components/ui/input"
+import { Label }   from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Badge }   from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  AlertCircle,
-  Search,
-  Wallet,
-  Download,
-  CalendarIcon,
-  Info,
-  MessageCircle,
+  AlertCircle, Search, Wallet, Download, CalendarIcon, Info, MessageCircle,
 } from "lucide-react"
-import { useUser } from "@/hooks/useUser"
-import Swal from "sweetalert2"
+import { useUser }  from "@/hooks/useUser"
+import Swal         from "sweetalert2"
 import { format, isValid, getDaysInMonth } from "date-fns"
+import ServerCopyHistory from "../services-history/serverCopyHistory"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
-// ── Types ─────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface NidData {
-  name: string
-  nameEn: string
-  nid: string
-  pin: string
-  dob: string
-  father: string
-  mother: string
-  spouse: string
-  bloodGroup: string
-  gender: string
-  birthPlace: string
-  religion: string
-  voterNo: string
-  slNo: number
-  voterArea: string
-  voterAreaCode: number
-  preAddressLine: string
-  perAddressLine: string
-  photo: string
+  name: string; nameEn: string; nid: string; pin: string; dob: string
+  father: string; mother: string; spouse: string; bloodGroup: string
+  gender: string; birthPlace: string; religion: string; voterNo: string
+  slNo: number; voterArea: string; voterAreaCode: number
+  preAddressLine: string; perAddressLine: string; photo: string
 }
 
-interface ParseResult {
-  valid: boolean
-  formatted: string
-  date: Date | undefined
-}
+interface ParseResult { valid: boolean; formatted: string; date: Date | undefined }
 
-// ── Flexible date parser ──────────────────────────────────────
-// Accepts: yyyy-MM-dd  yyyy/MM/dd  yyyy.MM.dd
-//          dd-MM-yyyy  dd/MM/yyyy  dd.MM.yyyy
-//          dd-MM-yy    dd/MM/yy    (2-digit year)
+// ── Flexible date parser (unchanged from original) ────────────────────────────
+
 function parseFlexibleDate(input: string): ParseResult {
   const FAIL: ParseResult = { valid: false, formatted: "", date: undefined }
-
   const trimmed = input.trim()
   if (!trimmed) return FAIL
 
@@ -1061,35 +1620,21 @@ function parseFlexibleDate(input: string): ParseResult {
   if (parts.some((p) => !/^\d+$/.test(p.trim()))) return FAIL
 
   const [p0, p1, p2] = parts.map((p) => p.trim())
-  const n0 = Number(p0)
-  const n1 = Number(p1)
-  const n2 = Number(p2)
+  const n0 = Number(p0); const n1 = Number(p1); const n2 = Number(p2)
 
-  let year: number
-  let month: number
-  let day: number
+  let year: number, month: number, day: number
 
-  if (p0.length === 4) {
-    // yyyy-MM-dd
-    year = n0; month = n1; day = n2
-  } else if (p2.length === 4) {
-    // dd-MM-yyyy
-    day = n0; month = n1; year = n2
-  } else {
-    // Ambiguous short: treat as dd-MM-yy
+  if (p0.length === 4) { year = n0; month = n1; day = n2 }
+  else if (p2.length === 4) { day = n0; month = n1; year = n2 }
+  else {
     if (n0 > 31) return FAIL
     day = n0; month = n1; year = n2
     year = year < 30 ? 2000 + year : 1900 + year
   }
 
   if (
-    !Number.isFinite(year) ||
-    !Number.isFinite(month) ||
-    !Number.isFinite(day) ||
-    month < 1 || month > 12 ||
-    day < 1 ||
-    year < 1900 ||
-    year > new Date().getFullYear()
+    !Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day) ||
+    month < 1 || month > 12 || day < 1 || year < 1900 || year > new Date().getFullYear()
   ) return FAIL
 
   if (day > getDaysInMonth(new Date(year, month - 1))) return FAIL
@@ -1097,49 +1642,56 @@ function parseFlexibleDate(input: string): ParseResult {
   const date = new Date(year, month - 1, day)
   if (!isValid(date)) return FAIL
 
-  const formatted = [
-    String(year),
-    String(month).padStart(2, "0"),
-    String(day).padStart(2, "0"),
-  ].join("-")
-
+  const formatted = [String(year), String(month).padStart(2, "0"), String(day).padStart(2, "0")].join("-")
   return { valid: true, formatted, date }
 }
 
-// ── Component ─────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function ServerCopyPage() {
   const { user, refreshWallet } = useUser()
 
-  const [nid, setNid] = useState("")
-  const [dob, setDob] = useState("")          // always yyyy-MM-dd
-  const [dobDate, setDobDate] = useState<Date | undefined>(undefined)
-  const [dobInput, setDobInput] = useState("")          // raw display value
-  const [dobError, setDobError] = useState("")
+  const [nid,          setNid]          = useState("")
+  const [dob,          setDob]          = useState("")
+  const [dobDate,      setDobDate]      = useState<Date | undefined>(undefined)
+  const [dobInput,     setDobInput]     = useState("")
+  const [dobError,     setDobError]     = useState("")
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [nidData, setNidData] = useState<NidData | null>(null)
-  const [pdfLoading, setPdfLoading] = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState("")
+  const [nidData,      setNidData]      = useState<NidData | null>(null)
+  const [pdfLoading,   setPdfLoading]   = useState(false)
+
+  // ── Settings loaded from API ───────────────────────────────────────────────
+  const [pageTitle,  setPageTitle]  = useState("সার্ভার কপি")
+  const [pageNotice, setPageNotice] = useState("NID অবশ্যই ১০ বা ১৭ সংখ্যার হতে হবে। যদি সংখ্যা ১৩ অঙ্কের হয়, তাহলে NID নম্বরের পূর্বে জন্মসাল যোগ করে ১৭ অঙ্কের করে সার্ভার কপি তৈরি করুন।")
+  const [charge,     setCharge]     = useState(70)
+
+  useEffect(() => {
+    getPublicSettings()
+      .then((res) => {
+        if (res?.success && res.data) {
+          const d = res.data
+          if (d.serverCopyTitle)   setPageTitle(d.serverCopyTitle)
+          if (d.serverCopyNotice !== undefined) setPageNotice(d.serverCopyNotice)
+          if (d.serverCopyCharge !== undefined) setCharge(d.serverCopyCharge)
+        }
+      })
+      .catch(() => { /* keep defaults */ })
+  }, [])
 
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin"
   const balance = user?.wallet?.balance ?? 0
 
-  // ── Apply a resolved date to all state ───────────────────
+  // ── Date helpers (unchanged from original) ────────────────────────────────
+
   const applyDate = (formatted: string, date: Date) => {
-    setDob(formatted)
-    setDobDate(date)
-    setDobInput(formatted)
-    setDobError("")
+    setDob(formatted); setDobDate(date); setDobInput(formatted); setDobError("")
   }
+  const clearDate = () => { setDob(""); setDobDate(undefined) }
 
-  const clearDate = () => {
-    setDob("")
-    setDobDate(undefined)
-  }
-
-  // ── Calendar select ──────────────────────────────────────
   const handleCalendarSelect = (date: Date | undefined) => {
     if (!date) return
     applyDate(format(date, "yyyy-MM-dd"), date)
@@ -1147,104 +1699,57 @@ export default function ServerCopyPage() {
     inputRef.current?.focus()
   }
 
-  // ── Typing inside the input — live parse ─────────────────
   const handleDobInputChange = (value: string) => {
-    setDobInput(value)
-    setDobError("")
-
-    if (!value.trim()) {
-      clearDate()
-      return
-    }
-
+    setDobInput(value); setDobError("")
+    if (!value.trim()) { clearDate(); return }
     const result = parseFlexibleDate(value)
-    if (result.valid && result.date) {
-      setDob(result.formatted)
-      setDobDate(result.date)
-    } else {
-      clearDate()
-    }
+    if (result.valid && result.date) { setDob(result.formatted); setDobDate(result.date) }
+    else clearDate()
   }
 
-  // ── On blur — normalise display to yyyy-MM-dd ────────────
   const handleDobBlur = () => {
     if (!dobInput.trim()) return
-
     const result = parseFlexibleDate(dobInput)
-    if (!result.valid) {
-      setDobError("তারিখটি সঠিক নয়। উদাহরণ: 1999-10-10 বা 10-10-2000")
-    } else {
-      setDobError("")
-      setDobInput(result.formatted)
-    }
+    if (!result.valid) setDobError("তারিখটি সঠিক নয়। উদাহরণ: 1999-10-10 বা 10-10-2000")
+    else { setDobError(""); setDobInput(result.formatted) }
   }
 
-  // ── NID: 13-digit → 17-digit using birth-year ───────────
   const getNormalizedNid = (): string => {
     const cleaned = nid.replace(/\D/g, "")
-    if (cleaned.length === 13 && dob) {
-      return dob.split("-")[0] + cleaned
-    }
+    if (cleaned.length === 13 && dob) return dob.split("-")[0] + cleaned
     return cleaned
   }
 
-  // ── SweetAlert helpers ───────────────────────────────────
-  const showLoading = () =>
-    Swal.fire({
-      title: "সার্ভার কপি তৈরি হচ্ছে...",
-      html: "অনুগ্রহ করে অপেক্ষা করুন",
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-      background: "hsl(var(--card))",
-      color: "hsl(var(--foreground))",
-    })
+  // ── Swal helpers ──────────────────────────────────────────────────────────
 
-  const showSuccess = () =>
-    Swal.fire({
-      icon: "success",
-      title: "সফল হয়েছে",
-      text: "এই পেজ থেকে PDF ডাউনলোড করতে সমস্যা হলে Services-History থেকে ডাউনলোড করুন",
-      confirmButtonText: "ঠিক আছে",
-      background: "hsl(var(--card))",
-      color: "hsl(var(--foreground))",
-      confirmButtonColor: "#0f172a",
-    })
+  const showLoading = () => Swal.fire({
+    title: "সার্ভার কপি তৈরি হচ্ছে...", html: "অনুগ্রহ করে অপেক্ষা করুন",
+    allowOutsideClick: false, didOpen: () => Swal.showLoading(),
+    background: "hsl(var(--card))", color: "hsl(var(--foreground))",
+  })
 
-  // ── Search ───────────────────────────────────────────────
+  const showSuccess = () => Swal.fire({
+    icon: "success", title: "সফল হয়েছে",
+    text: "এই পেজ থেকে PDF ডাউনলোড করতে সমস্যা হলে Services-History থেকে ডাউনলোড করুন",
+    confirmButtonText: "ঠিক আছে",
+    background: "hsl(var(--card))", color: "hsl(var(--foreground))",
+    confirmButtonColor: "#0f172a",
+  })
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+
   const handleSearch = async () => {
-    setError("")
-    setNidData(null)
+    setError(""); setNidData(null)
 
-    if (!nid || !dob) {
-      setError("NID নম্বর এবং জন্ম তারিখ দিন")
-      return
-    }
-
-    if (dobError) {
-      setError("সঠিক জন্ম তারিখ দিন")
-      return
-    }
+    if (!nid || !dob) { setError("NID নম্বর এবং জন্ম তারিখ দিন"); return }
+    if (dobError)     { setError("সঠিক জন্ম তারিখ দিন"); return }
 
     const cleaned = nid.replace(/\D/g, "")
+    if (![10, 13, 17].includes(cleaned.length)) { setError("NID অবশ্যই ১০, ১৩ বা ১৭ সংখ্যার হতে হবে"); return }
+    if (cleaned.length === 13 && !dob)           { setError("১৩ সংখ্যার NID এর ক্ষেত্রে জন্ম তারিখ অবশ্যই দিতে হবে"); return }
+    if (!isAdmin && balance < charge)            { setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।"); return }
 
-    if (![10, 13, 17].includes(cleaned.length)) {
-      setError("NID অবশ্যই ১০, ১৩ বা ১৭ সংখ্যার হতে হবে")
-      return
-    }
-
-    if (cleaned.length === 13 && !dob) {
-      setError("১৩ সংখ্যার NID এর ক্ষেত্রে জন্ম তারিখ অবশ্যই দিতে হবে")
-      return
-    }
-
-    if (!isAdmin && balance < 70) {
-      setError("পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে রিচার্জ করুন।")
-      return
-    }
-
-    setLoading(true)
-    showLoading()
-
+    setLoading(true); showLoading()
     try {
       const token = await auth.currentUser?.getIdToken()
       if (!token) throw new Error("Token not found")
@@ -1252,23 +1757,18 @@ export default function ServerCopyPage() {
       const result = await searchNid(token, getNormalizedNid(), dob)
       Swal.close()
 
-      if (!result.success) {
-        setError(result.message || "তথ্য পাওয়া যায়নি")
-        return
-      }
+      if (!result.success) { setError(result.message || "তথ্য পাওয়া যায়নি"); return }
 
       setNidData(result.data)
       await refreshWallet()
       showSuccess()
     } catch {
-      Swal.close()
-      setError("সার্ভার এরর। আবার চেষ্টা করুন।")
-    } finally {
-      setLoading(false)
-    }
+      Swal.close(); setError("সার্ভার এরর। আবার চেষ্টা করুন।")
+    } finally { setLoading(false) }
   }
 
-  // ── PDF download ─────────────────────────────────────────
+  // ── PDF download ───────────────────────────────────────────────────────────
+
   const handleDownloadPdf = async () => {
     if (!nidData) return
     setPdfLoading(true)
@@ -1278,51 +1778,45 @@ export default function ServerCopyPage() {
 
       const res = await fetch(
         `${BASE_URL}/server-copy/pdf?nid=${nidData.nid}&dob=${nidData.dob}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       if (!res.ok) throw new Error("PDF generation failed")
 
       const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `NID_${nidData.nid}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      a.href = url; a.download = `NID_${nidData.nid}.pdf`
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a); URL.revokeObjectURL(url)
     } catch {
       setError("PDF তৈরিতে সমস্যা হয়েছে।")
-    } finally {
-      setPdfLoading(false)
-    }
+    } finally { setPdfLoading(false) }
   }
 
-  // ── Render ───────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-3 py-4 text-foreground sm:px-0 sm:py-0">
 
-      {/* Header */}
+      {/* Header — title from settings */}
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-foreground sm:text-2xl">সার্ভার কপি</h1>
+        <h1 className="text-xl font-bold text-foreground sm:text-2xl">{pageTitle}</h1>
         {!isAdmin && (
           <Badge variant="outline" className="shrink-0 gap-1.5 px-3 py-1.5 text-sm">
-            <Wallet className="size-4" />
-            ৳{balance}
+            <Wallet className="size-4" />৳{balance}
           </Badge>
         )}
       </div>
 
-      {/* Notice */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 dark:border-blue-500/30 dark:bg-blue-950/30">
-        <div className="flex items-start gap-2.5">
-          <Info className="mt-0.5 size-4 shrink-0 text-blue-500 dark:text-blue-400" />
-          <p className="text-[13px] leading-relaxed text-blue-800 dark:text-blue-200">
-            NID অবশ্যই ১০ বা ১৭ সংখ্যার হতে হবে। যদি সংখ্যা ১৩ অঙ্কের হয়, তাহলে NID
-            নম্বরের পূর্বে জন্মসাল যোগ করে ১৭ অঙ্কের করে সার্ভার কপি তৈরি করুন।
-          </p>
+      {/* Notice — text from settings (hide if empty) */}
+      {pageNotice && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 dark:border-blue-500/30 dark:bg-blue-950/30">
+          <div className="flex items-start gap-2.5">
+            <Info className="mt-0.5 size-4 shrink-0 text-blue-500 dark:text-blue-400" />
+            <p className="text-[13px] leading-relaxed text-blue-800 dark:text-blue-200">{pageNotice}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search Card */}
       <Card className="border-border bg-card">
@@ -1335,8 +1829,7 @@ export default function ServerCopyPage() {
           {/* NID input */}
           <div className="space-y-1.5">
             <Label className="text-foreground">
-              এনআইডি নম্বর{" "}
-              <span className="text-red-500">*</span>
+              এনআইডি নম্বর <span className="text-red-500">*</span>
               <span className="ml-2 text-xs text-muted-foreground">১০ / ১৭ সংখ্যা</span>
             </Label>
             <Input
@@ -1349,26 +1842,16 @@ export default function ServerCopyPage() {
             {nid && (
               <p className="text-xs text-muted-foreground">
                 সংখ্যা: {nid.length} / ১৭
-                {nid.length === 13 && (
-                  <span className="ml-1 text-amber-600 dark:text-amber-400">
-                    → জন্মসাল যোগ হবে
-                  </span>
-                )}
-                {nid.length === 13 && !dob && (
-                  <span className="ml-1 text-red-500">(জন্ম তারিখ দিন)</span>
-                )}
+                {nid.length === 13 && <span className="ml-1 text-amber-600 dark:text-amber-400">→ জন্মসাল যোগ হবে</span>}
+                {nid.length === 13 && !dob && <span className="ml-1 text-red-500">(জন্ম তারিখ দিন)</span>}
               </p>
             )}
           </div>
 
-          {/* DOB — single unified input with calendar icon */}
+          {/* DOB */}
           <div className="space-y-1.5">
-            <Label className="text-foreground">
-              জন্ম তারিখ <span className="text-red-500">*</span>
-            </Label>
-
+            <Label className="text-foreground">জন্ম তারিখ <span className="text-red-500">*</span></Label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              {/* Wrapper: positions the calendar icon inside the input */}
               <div className="relative">
                 <Input
                   ref={inputRef}
@@ -1379,95 +1862,67 @@ export default function ServerCopyPage() {
                   maxLength={10}
                   className={[
                     "border-border bg-background pr-10 text-foreground placeholder:text-muted-foreground",
-                    dobError
-                      ? "border-red-400 focus-visible:ring-red-400 dark:border-red-500"
-                      : dob
-                        ? "border-emerald-400 focus-visible:ring-emerald-400 dark:border-emerald-500"
-                        : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
+                    dobError ? "border-red-400 focus-visible:ring-red-400 dark:border-red-500"
+                             : dob ? "border-emerald-400 focus-visible:ring-emerald-400 dark:border-emerald-500" : "",
+                  ].filter(Boolean).join(" ")}
                 />
-                {/* Calendar icon trigger — sits inside the input on the right */}
                 <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="তারিখ ক্যালেন্ডার খুলুন"
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
-                  >
+                  <button type="button" aria-label="তারিখ ক্যালেন্ডার খুলুন"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground focus:outline-none">
                     <CalendarIcon className="size-4" />
                   </button>
                 </PopoverTrigger>
               </div>
-
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={dobDate}
-                  onSelect={handleCalendarSelect}
-                  defaultMonth={dobDate}
-                  captionLayout="dropdown"
-                  fromYear={1940}
-                  toYear={new Date().getFullYear()}
-                  className="bg-card"
-                />
+                <Calendar mode="single" selected={dobDate} onSelect={handleCalendarSelect}
+                  defaultMonth={dobDate} captionLayout="dropdown"
+                  fromYear={1940} toYear={new Date().getFullYear()} className="bg-card" />
               </PopoverContent>
             </Popover>
 
-            {/* Feedback line below input */}
             {dobError ? (
               <p className="flex items-center gap-1 text-[11px] text-red-500">
-                <AlertCircle className="size-3 shrink-0" />
-                {dobError}
+                <AlertCircle className="size-3 shrink-0" />{dobError}
               </p>
             ) : dob ? (
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                ✓ তারিখ নির্ধারিত: {dob}
-              </p>
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">✓ তারিখ নির্ধারিত: {dob}</p>
             ) : (
               <p className="text-[11px] text-muted-foreground">
-                ইনপুট বাক্স এ <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  YYYY-MM-DD
-                </span> এই ফরম্যাট  অথবা ক্যালেন্ডার আইকনে ক্লিক করে আপনার জন্ম তারিখ মাস সন দেন।
+                ইনপুট বাক্স এ <span className="font-bold text-emerald-600 dark:text-emerald-400">YYYY-MM-DD</span> এই ফরম্যাট অথবা ক্যালেন্ডার আইকনে ক্লিক করুন।
               </p>
             )}
           </div>
 
-          {/* Error banner */}
+          {/* Error */}
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
-              <AlertCircle className="size-4 shrink-0" />
-              {error}
+              <AlertCircle className="size-4 shrink-0" />{error}
             </div>
           )}
 
-          {/* Charge info */}
+          {/* Charge info — dynamic from settings */}
           {!isAdmin && (
             <p className="rounded-lg border border-border bg-muted/40 py-2.5 text-center text-sm text-muted-foreground">
-              সার্ভার কপি তৈরি করতে{" "}
-              <span className="font-semibold text-primary">৳৭০</span> চার্জ কাটবে
+              সার্ভার কপি তৈরি করতে <span className="font-semibold text-primary">৳{charge}</span> চার্জ কাটবে
             </p>
           )}
 
-          {/* Loading indicator */}
+          {/* Loading */}
           {loading && (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-muted/20 py-5">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
               <p className="text-center text-sm leading-relaxed text-muted-foreground">
-                সার্ভার কপি তৈরি হচ্ছে...
-                <br />
+                সার্ভার কপি তৈরি হচ্ছে...<br />
                 PDF ডাউনলোডে সমস্যা হলে{" "}
                 <span className="font-medium text-primary">Services-History</span> থেকে নিন
               </p>
             </div>
           )}
 
-          {/* Submit */}
           <Button className="w-full gap-2" onClick={handleSearch} disabled={loading}>
             <Search className="size-4" />
             {loading ? "অনুসন্ধান করা হচ্ছে..." : "সার্ভার কপি তৈরি করুন"}
           </Button>
-
         </CardContent>
       </Card>
 
@@ -1476,84 +1931,55 @@ export default function ServerCopyPage() {
         <Card className="border-border bg-card">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-base text-emerald-600 dark:text-emerald-400">
-                ✓ তথ্য পাওয়া গেছে
-              </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5"
-                onClick={handleDownloadPdf}
-                disabled={pdfLoading}
-              >
+              <CardTitle className="text-base text-emerald-600 dark:text-emerald-400">✓ তথ্য পাওয়া গেছে</CardTitle>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={handleDownloadPdf} disabled={pdfLoading}>
                 <Download className="size-4" />
                 {pdfLoading ? "PDF তৈরি হচ্ছে..." : "PDF ডাউনলোড"}
               </Button>
             </div>
           </CardHeader>
-
           <CardContent>
             <div className="flex flex-col gap-4 sm:flex-row">
               {nidData.photo && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={nidData.photo}
-                  alt={nidData.nameEn}
-                  className="mx-auto h-28 w-24 shrink-0 rounded-lg border border-border object-cover sm:mx-0"
-                />
+                <img src={nidData.photo} alt={nidData.nameEn}
+                  className="mx-auto h-28 w-24 shrink-0 rounded-lg border border-border object-cover sm:mx-0" />
               )}
               <div className="space-y-1.5 text-sm text-foreground">
-                <p>
-                  <span className="inline-block w-28 text-muted-foreground">নাম (বাংলা):</span>
-                  <strong>{nidData.name}</strong>
-                </p>
-                <p>
-                  <span className="inline-block w-28 text-muted-foreground">নাম (ইংরেজি):</span>
-                  {nidData.nameEn}
-                </p>
-                <p>
-                  <span className="inline-block w-28 text-muted-foreground">NID নম্বর:</span>
-                  {nidData.nid}
-                </p>
-                <p>
-                  <span className="inline-block w-28 text-muted-foreground">জন্ম তারিখ:</span>
-                  {nidData.dob}
-                </p>
-                <p>
-                  <span className="inline-block w-28 text-muted-foreground">পিতার নাম:</span>
-                  {nidData.father}
-                </p>
-                <p>
-                  <span className="inline-block w-28 text-muted-foreground">মাতার নাম:</span>
-                  {nidData.mother}
-                </p>
+                {[
+                  ["নাম (বাংলা)", <strong key="n">{nidData.name}</strong>],
+                  ["নাম (ইংরেজি)", nidData.nameEn],
+                  ["NID নম্বর", nidData.nid],
+                  ["জন্ম তারিখ", nidData.dob],
+                  ["পিতার নাম", nidData.father],
+                  ["মাতার নাম", nidData.mother],
+                ].map(([label, val]) => (
+                  <p key={String(label)}>
+                    <span className="inline-block w-28 text-muted-foreground">{label}:</span>
+                    {val}
+                  </p>
+                ))}
               </div>
             </div>
-
             <Separator className="my-4" />
-
             <p className="text-xs leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">বর্তমান ঠিকানা:</strong>{" "}
-              {nidData.preAddressLine}
+              <strong className="text-foreground">বর্তমান ঠিকানা:</strong> {nidData.preAddressLine}
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Footer Notice */}
+      <div className="mt-8"><ServerCopyHistory /></div>
+
+      {/* Footer */}
       <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
         <MessageCircle className="size-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
         <p>
           সার্ভিস জনিত কোন সমস্যা হলে আমাদের{" "}
-          <a
-            href="https://wa.me/8801973346401?text=Hello%20"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-emerald-600 underline underline-offset-2 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-          >
+          <a href="https://wa.me/8801973346401?text=Hello%20" target="_blank" rel="noopener noreferrer"
+            className="font-semibold text-emerald-600 underline underline-offset-2 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
             WhatsApp
-          </a>{" "}
-          এ যোগাযোগ করুন।
+          </a>{" "}এ যোগাযোগ করুন।
         </p>
       </div>
 

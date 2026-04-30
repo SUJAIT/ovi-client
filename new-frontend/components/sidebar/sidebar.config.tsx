@@ -1,7 +1,145 @@
+// import {
+//   LayoutDashboard,
+//   Folder,
+//   BookOpen,
+//   Users,
+//   BarChart2,
+//   Wallet,
+//   History,
+//   Settings,
+//   Bell,
+//   BarChart3,
+//   Send,
+
+//   type LucideIcon,
+// } from "lucide-react"
+
+// export type TUserRole = "user" | "admin" | "super_admin"
+// export type NavChild = { 
+//   title: string
+//   href: string
+//   badgeKey?: string // used to look up dynamic counts
+// }
+// export type NavItem = {
+//   title: string
+//   icon: LucideIcon
+//   href?: string
+//   roles?: TUserRole[]
+//   children?: NavChild[]
+// }
+// export type NavGroup = {
+//   label: string
+//   roles?: TUserRole[]
+//   items: NavItem[]
+// }
+// export type Team = { name: string; plan: string; logoUrl?: string }
+
+// export const TEAMS: Team[] = [
+//   {
+//     name: "ICT Seba",
+//     plan: "Workstation",
+//     logoUrl: "/images/logo.png"
+//   }
+// ]
+
+// export const NAV_GROUPS: NavGroup[] = [
+//   // ── সবার জন্য
+//   {
+//     label: "Application",
+//     items: [
+//       { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+//     ],
+//   },
+
+//   // ── শুধু User
+//   {
+//     label: "Platform",
+//     roles: ["user"],
+//     items: [
+//       {
+//         title: "সকল-সেবা",
+//         icon: Folder,
+//         children: [
+//           { title: "সার্ভার-কপি",       href: "/workplace/server-copy" },
+//           { title: "NID কার্ড উত্তোলন", href: "/workplace/nid-withdraw" }, // ← new
+//         ],
+//       },
+//       { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
+//       { title: "রিচার্জ",           icon: Wallet,  href: "/recharge" },
+//       { title: "রিচার্জ-History",   icon: History, href: "/recharge-history" },
+//     ],
+//   },
+
+//   // ── Admin Platform
+//   {
+//     label: "Platform",
+//     roles: ["admin", "super_admin"],
+//     items: [
+//       {
+//         title: "Workplace",
+//         icon: Folder,
+//         children: [
+//           { title: "Server-Copy",        href: "/workplace/server-copy" },
+         
+//         ],
+//       },
+//     ],
+//   },
+
+//   // service request 
+
+//     {
+//     label: "Service Requests",
+//     roles: ["admin", "super_admin"],
+//     items: [
+//       {
+//         title: "All Requests",
+//         icon: Folder,
+//         children: [
+//       { title: "NID উত্তোলন Requests", href: "/admin/nid-withdraw", badgeKey: "nid_withdraw_request" },
+        
+//         ],
+//       },
+//     ],
+//   },
+
+//   // ── Admin Panel
+//   {
+//     label: "Admin Panel",
+//     roles: ["admin", "super_admin"],
+//     items: [
+//       { title: "Services-History",   icon: BookOpen,  href: "/workplace/services-history" },
+//       { title: "Users",              icon: Users,     href: "/admin/users",              roles: ["admin", "super_admin"] },
+//       { title: "Recharge Requests",  icon: Bell,      href: "/admin/recharge-requests",  roles: ["admin", "super_admin"] },
+      
+//       { title: "Transactions",       icon: BarChart2, href: "/admin/transactions",       roles: ["admin", "super_admin"] },
+//       { title: "Settings",           icon: Settings,  href: "/admin/settings",           roles: ["super_admin"] },
+//       {
+//         title: "Analytic-Server-Copy",
+//         icon: BarChart2,
+//         href: "/admin/analytics",
+//         roles: ["admin", "super_admin"]
+//       },
+//       {
+//         title: "Server API Limit",
+//         icon: BarChart3,
+//         href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
+//       },
+//         {
+//     title: "Telegram Bot",
+//     icon: Send,
+//     href: "/admin/telegram",
+  
+//   },
+//     ],
+//   },
+// ]
+
+
 import {
   LayoutDashboard,
   Folder,
-  BookOpen,
+  // BookOpen,
   Users,
   BarChart2,
   Wallet,
@@ -9,38 +147,42 @@ import {
   Settings,
   Bell,
   BarChart3,
-  Send,
-
+  // Send,
   type LucideIcon,
 } from "lucide-react"
 
 export type TUserRole = "user" | "admin" | "super_admin"
-export type NavChild = { 
-  title: string
-  href: string
-  badgeKey?: string // used to look up dynamic counts
+export type NavChild = {
+  title:    string
+  href:     string
+  badgeKey?: string
+  dynamic?: boolean   // signals this entry was generated from a dynamic service
 }
 export type NavItem = {
-  title: string
-  icon: LucideIcon
-  href?: string
-  roles?: TUserRole[]
+  title:    string
+  icon:     LucideIcon
+  href?:    string
+  roles?:   TUserRole[]
   children?: NavChild[]
 }
 export type NavGroup = {
-  label: string
+  label:  string
   roles?: TUserRole[]
-  items: NavItem[]
+  items:  NavItem[]
 }
 export type Team = { name: string; plan: string; logoUrl?: string }
 
 export const TEAMS: Team[] = [
   {
-    name: "ICT Seba",
-    plan: "Workstation",
+    name:    "ICT Seba",
+    plan:    "Workstation",
     logoUrl: "/images/logo.png"
   }
 ]
+
+// ── Static nav groups ─────────────────────────────────────────────────────────
+// Dynamic service links are injected at runtime inside NavMain
+// using the getAllServices() API call — see components/sidebar/nav-main.tsx
 
 export const NAV_GROUPS: NavGroup[] = [
   // ── সবার জন্য
@@ -58,15 +200,16 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         title: "সকল-সেবা",
-        icon: Folder,
+        icon:  Folder,
         children: [
           { title: "সার্ভার-কপি",       href: "/workplace/server-copy" },
-          { title: "NID কার্ড উত্তোলন", href: "/workplace/nid-withdraw" }, // ← new
+          { title: "NID কার্ড উত্তোলন", href: "/workplace/nid-withdraw" },
+          // Dynamic custom services are appended here at runtime by NavMain
         ],
       },
-      { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
-      { title: "রিচার্জ",           icon: Wallet,  href: "/recharge" },
-      { title: "রিচার্জ-History",   icon: History, href: "/recharge-history" },
+      // { title: "Services-History", icon: BookOpen, href: "/workplace/services-history" },
+      { title: "রিচার্জ",          icon: Wallet,   href: "/recharge" },
+      { title: "রিচার্জ-History",  icon: History,  href: "/recharge-history" },
     ],
   },
 
@@ -77,27 +220,25 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         title: "Workplace",
-        icon: Folder,
+        icon:  Folder,
         children: [
-          { title: "Server-Copy",        href: "/workplace/server-copy" },
-         
+          { title: "Server-Copy", href: "/workplace/server-copy" },
         ],
       },
     ],
   },
 
-  // service request 
-
-    {
+  // ── Service Requests
+  {
     label: "Service Requests",
     roles: ["admin", "super_admin"],
     items: [
       {
-        title: "All Requests",
-        icon: Folder,
+        title:    "All Requests",
+        icon:     Folder,
         children: [
-      { title: "NID উত্তোলন Requests", href: "/admin/nid-withdraw", badgeKey: "nid_withdraw_request" },
-        
+          { title: "NID উত্তোলন Requests", href: "/admin/nid-withdraw", badgeKey: "nid_withdraw_request" },
+          // Dynamic custom service request links appended at runtime by NavMain
         ],
       },
     ],
@@ -108,29 +249,14 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Admin Panel",
     roles: ["admin", "super_admin"],
     items: [
-      { title: "Services-History",   icon: BookOpen,  href: "/workplace/services-history" },
-      { title: "Users",              icon: Users,     href: "/admin/users",              roles: ["admin", "super_admin"] },
-      { title: "Recharge Requests",  icon: Bell,      href: "/admin/recharge-requests",  roles: ["admin", "super_admin"] },
-      
-      { title: "Transactions",       icon: BarChart2, href: "/admin/transactions",       roles: ["admin", "super_admin"] },
-      { title: "Settings",           icon: Settings,  href: "/admin/settings",           roles: ["super_admin"] },
-      {
-        title: "Analytic-Server-Copy",
-        icon: BarChart2,
-        href: "/admin/analytics",
-        roles: ["admin", "super_admin"]
-      },
-      {
-        title: "Server API Limit",
-        icon: BarChart3,
-        href: "https://api-system.xyz/balance.php?key=2Q7jEdFY"
-      },
-        {
-    title: "Telegram Bot",
-    icon: Send,
-    href: "/admin/telegram",
-  
-  },
+      // { title: "Services-History",    icon: BookOpen,  href: "/workplace/services-history" },
+      { title: "Users",               icon: Users,     href: "/admin/users",               roles: ["admin", "super_admin"] },
+      { title: "Recharge Requests",   icon: Bell,      href: "/admin/recharge-requests",   roles: ["admin", "super_admin"] },
+      { title: "Transactions",        icon: BarChart2, href: "/admin/transactions",        roles: ["admin", "super_admin"] },
+      { title: "Settings",            icon: Settings,  href: "/admin/settings",            roles: ["super_admin"] },
+      { title: "Analytic-Server-Copy",icon: BarChart2, href: "/admin/analytics",           roles: ["admin", "super_admin"] },
+      { title: "Server API Limit",    icon: BarChart3, href: "https://api-system.xyz/balance.php?key=2Q7jEdFY" },
+      // { title: "Telegram Bot",        icon: Send,      href: "/admin/telegram" },
     ],
   },
 ]

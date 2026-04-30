@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // import { redirect } from "next/navigation"
 
 // export default function Home() {
